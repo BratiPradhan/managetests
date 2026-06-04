@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
 import { loginSchema, LoginFormValues } from '@/lib/validations/login.schema'
 import { login } from '@/services/auth.service'
-import { setToken } from '@/lib/auth'
+import { setToken, setUser } from '@/lib/auth'
 
 export default function LoginForm() {
   const router = useRouter()
@@ -23,8 +23,9 @@ export default function LoginForm() {
   const onSubmit = async (values: LoginFormValues) => {
     setServerError(null)
     try {
-      const { token } = await login(values)
+      const { token, user } = await login(values)
       setToken(token)
+      if (user) setUser(user)
       router.push('/dashboard')
     } catch {
       setServerError('Invalid credentials. Please try again.')

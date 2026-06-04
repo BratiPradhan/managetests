@@ -1,9 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { isAuthenticated } from "@/lib/auth";
-import Navbar from "@/components/common/Navbar";
+import Sidebar from "@/components/common/Sidebar";
+import TopHeader from "@/components/common/TopHeader";
+
+// No-op subscription — localStorage auth state doesn't change externally
+const subscribe = () => () => {};
 
 export default function ProtectedLayout({
   children,
@@ -11,24 +15,28 @@ export default function ProtectedLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const [checked, setChecked] = useState(false);
+
+  const authenticated = useSyncExternalStore(
+    subscribe,
+    () => isAuthenticated(),
+    () => false,
+  );
 
   useEffect(() => {
-    if (!isAuthenticated()) {
+    if (!authenticated) {
       router.replace("/login");
-    } else {
-      setChecked(true);
     }
-  }, [router]);
+  }, [authenticated, router]);
 
-  if (!checked) return null;
+  if (!authenticated) return null;
 
   return (
-    <div className="min-h-screen flex flex-col bg-muted/40">
-      <Navbar />
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-8">
-        {children}
-      </main>
+    <div className="flex min-h-screen bg-gray-50">
+      <Sidebar />
+      <div className="flex-1 flex flex-col min-w-0">
+        <TopHeader />
+        <main className="flex-1 p-6 overflow-auto">{children}</main>
+      </div>
     </div>
   );
 }

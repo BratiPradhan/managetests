@@ -21,7 +21,7 @@ export interface SubTopic {
   topic_id: string
 }
 
-export type TestStatus = 'draft' | 'live' | null
+export type TestStatus = 'live' | 'unpublished' | 'scheduled' | 'expired' | 'draft'
 
 export interface Test {
   id: string
@@ -86,10 +86,6 @@ export interface CreateTestPayload {
   status: TestStatus
 }
 
-export interface UpdateTestPayload {
-  name?: string
+export interface UpdateTestPayload extends Partial<CreateTestPayload> {
   questions?: string[]
-  total_questions?: number
-  total_marks?: number
-  status?: TestStatus
 }

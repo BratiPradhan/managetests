@@ -1,10 +1,17 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
-import { Bell, ChevronDown } from 'lucide-react'
-import { getUser } from '@/lib/auth'
+import { usePathname, useRouter } from 'next/navigation'
+import { Bell, ChevronDown, LogOut } from 'lucide-react'
+import { getUser, removeToken } from '@/lib/auth'
 import { useEffect, useState } from 'react'
 import { User } from '@/types'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 const BREADCRUMB_MAP: Record<string, string[]> = {
   '/dashboard': ['Dashboard'],
@@ -41,6 +48,7 @@ function getInitials(name?: string): string {
 
 export default function TopHeader() {
   const pathname = usePathname()
+  const router = useRouter()
   const crumbs = getBreadcrumbs(pathname)
   const [user, setUser] = useState<User | null>(null)
 
@@ -49,6 +57,11 @@ export default function TopHeader() {
   }, [])
 
   const displayName = user?.name ?? 'Admin'
+
+  const handleLogout = () => {
+    removeToken()
+    router.replace('/login')
+  }
 
   return (
     <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-6 shrink-0">
@@ -71,18 +84,34 @@ export default function TopHeader() {
           <Bell className="w-4 h-4" />
         </button>
 
-        {/* User info */}
-        <div className="flex items-center gap-2.5 cursor-pointer select-none">
-          {/* Avatar */}
-          <div className="w-9 h-9 rounded-full bg-orange-400 flex items-center justify-center text-white text-xs font-bold">
-            {getInitials(user?.name)}
-          </div>
-          <div className="leading-tight">
-            <p className="text-sm font-semibold text-gray-800">{displayName}</p>
-            <p className="text-xs text-gray-400">Admin</p>
-          </div>
-          <ChevronDown className="w-4 h-4 text-gray-400" />
-        </div>
+        {/* User dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger className="flex items-center gap-2.5 outline-none cursor-pointer select-none">
+            <div className="w-9 h-9 rounded-full bg-orange-400 flex items-center justify-center text-white text-xs font-bold shrink-0">
+              {getInitials(user?.name)}
+            </div>
+            <div className="leading-tight text-left">
+              <p className="text-sm font-semibold text-gray-800">{displayName}</p>
+              <p className="text-xs text-gray-400">Admin</p>
+            </div>
+            <ChevronDown className="w-4 h-4 text-gray-400" />
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent align="end" className="w-44">
+            <div className="px-2 py-1.5">
+              <p className="text-sm font-medium text-gray-800 truncate">{displayName}</p>
+              <p className="text-xs text-gray-400">Admin</p>
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="text-red-500 focus:text-red-500 cursor-pointer"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   )

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getTests } from "@/services/test.service";
 import { Test } from "@/types";
@@ -13,8 +13,10 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchTests = async () => {
-    setLoading(true);
+  const fetchTests = useCallback(async (showLoading = true) => {
+    if (showLoading) {
+      setLoading(true);
+    }
     setError(null);
     try {
       const data = await getTests();
@@ -24,11 +26,11 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchTests();
-  }, []);
+    fetchTests(false);
+  }, [fetchTests]);
 
   return (
     <div className="space-y-6">

@@ -1,23 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { getTestById } from '@/services/test.service'
-import { Test } from '@/types'
+import { useEditTest } from '@/hooks/pages/useEditTest'
 import TestForm from '@/components/tests/TestForm'
 
 export default function EditTestPage() {
   const { id } = useParams<{ id: string }>()
-  const [test, setTest] = useState<Test | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    getTestById(id)
-      .then(setTest)
-      .catch(() => setError('Failed to load test.'))
-      .finally(() => setLoading(false))
-  }, [id])
+  const { test, loading, error } = useEditTest(id)
 
   if (loading) {
     return <div className="text-center py-16 text-muted-foreground">Loading test...</div>

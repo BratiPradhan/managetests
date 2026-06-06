@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getTests } from "@/services/test.service";
 import { Test } from "@/types";
-import { PAGE_SIZE } from "../../../constants";
+import { PAGE_SIZE } from "@/lib/constants";
 
 export function useDashboard() {
   const router = useRouter();

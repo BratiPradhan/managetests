@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
@@ -12,6 +12,7 @@ import { useSubjects } from '@/hooks/useSubjects'
 import { useTestFlowStore } from '@/store/testFlow.store'
 import { Test, Topic, SubTopic } from '@/types'
 import { cn } from '@/lib/utils'
+import SelectEmpty from '@/components/ui/select-empty'
 import {
   Select,
   SelectContent,
@@ -78,6 +79,9 @@ function Field({ label, error, children }: { label: string; error?: string; chil
   )
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const isUUID = (val: string) => UUID_REGEX.test(val)
+
 // ── Main component ────────────────────────────────────────────────────────────
 export default function TestForm({ initialData, testId }: TestFormProps) {
   const router = useRouter()
@@ -114,9 +118,15 @@ export default function TestForm({ initialData, testId }: TestFormProps) {
   const selectedSubject = watch('subject')
   const selectedTopic = watch('topic')
 
-  // Fetch topics when subject changes
+  // Refs holding raw name strings from initialData — used to resolve name→UUID after data loads
+  const pendingSubjectName = useRef<string | null>(null)
+  const pendingTopicName = useRef<string | null>(null)
+  const pendingSubTopicName = useRef<string | null>(null)
+
+  // Fetch topics when subject changes — skip if value is a name string (not a UUID)
   useEffect(() => {
     if (!selectedSubject) { setTopics([]); return }
+    if (!isUUID(selectedSubject)) return
     setTopicsLoading(true)
     setValue('topic', '')
     setValue('sub_topic', '')
@@ -127,9 +137,10 @@ export default function TestForm({ initialData, testId }: TestFormProps) {
       .finally(() => setTopicsLoading(false))
   }, [selectedSubject, setValue])
 
-  // Fetch sub-topics when topic changes
+  // Fetch sub-topics when topic changes — skip if value is a name string
   useEffect(() => {
     if (!selectedTopic) { setSubTopics([]); return }
+    if (!isUUID(selectedTopic)) return
     setSubTopicsLoading(true)
     setValue('sub_topic', '')
     getSubTopicsByTopic(selectedTopic)
@@ -138,9 +149,12 @@ export default function TestForm({ initialData, testId }: TestFormProps) {
       .finally(() => setSubTopicsLoading(false))
   }, [selectedTopic, setValue])
 
-  // Pre-populate for edit mode
+  // Pre-populate for edit mode — store names in refs for UUID resolution below
   useEffect(() => {
     if (!initialData) return
+    pendingSubjectName.current = initialData.subject
+    pendingTopicName.current = initialData.topics?.[0] ?? null
+    pendingSubTopicName.current = initialData.sub_topics?.[0] ?? null
     form.reset({
       name: initialData.name,
       type: initialData.type,
@@ -157,13 +171,47 @@ export default function TestForm({ initialData, testId }: TestFormProps) {
     })
   }, [initialData, form])
 
+  // Resolve subject name → UUID once subjects are loaded
+  useEffect(() => {
+    const name = pendingSubjectName.current
+    if (!name || subjects.length === 0) return
+    const match = subjects.find((s) => s.name === name || s.id === name)
+    if (match && !isUUID(name)) {
+      setValue('subject', match.id)
+      pendingSubjectName.current = null
+    }
+  }, [subjects, setValue])
+
+  // Resolve topic name → UUID once topics are loaded
+  useEffect(() => {
+    const name = pendingTopicName.current
+    if (!name || topics.length === 0) return
+    const match = topics.find((t) => t.name === name || t.id === name)
+    if (match && !isUUID(name)) {
+      setValue('topic', match.id)
+      pendingTopicName.current = null
+    }
+  }, [topics, setValue])
+
+  // Resolve sub-topic name → UUID once sub-topics are loaded
+  useEffect(() => {
+    const name = pendingSubTopicName.current
+    if (!name || subTopics.length === 0) return
+    const match = subTopics.find((st) => st.name === name || st.id === name)
+    if (match && !isUUID(name)) {
+      setValue('sub_topic', match.id)
+      pendingSubTopicName.current = null
+    }
+  }, [subTopics, setValue])
+
   const save = async (values: TestFormValues) => {
     const payload = {
       name: values.name,
       type: values.type,
       subject: values.subject,
       topics: values.topic ? [values.topic] : [],
-      sub_topics: values.sub_topic ? [values.sub_topic] : [],
+      // Omit sub_topics entirely when empty — API rejects []
+      ...(values.sub_topic ? { sub_topics: [values.sub_topic] } : {}),
       difficulty: values.difficulty,
       correct_marks: values.correct_marks,
       wrong_marks: values.wrong_marks,
@@ -230,12 +278,16 @@ export default function TestForm({ initialData, testId }: TestFormProps) {
             render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange} disabled={subjectsLoading}>
                 <SelectTrigger className="h-11 border-gray-200 text-gray-500">
-                  <SelectValue placeholder="Choose from Drop-down" />
+                  <SelectValue placeholder="Choose from Drop-down">
+                    {field.value ? (subjects.find(s => s.id === field.value)?.name ?? null) : null}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {subjects.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
+                  {subjects.length === 0
+                    ? <SelectEmpty />
+                    : subjects.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
                 </SelectContent>
               </Select>
             )}
@@ -264,12 +316,16 @@ export default function TestForm({ initialData, testId }: TestFormProps) {
                 disabled={!selectedSubject || topicsLoading}
               >
                 <SelectTrigger className="h-11 border-gray-200 text-gray-500">
-                  <SelectValue placeholder={topicsLoading ? 'Loading...' : 'Choose from Drop-down'} />
+                  <SelectValue placeholder={topicsLoading ? 'Loading...' : 'Choose from Drop-down'}>
+                    {field.value ? (topics.find(t => t.id === field.value)?.name ?? null) : null}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {topics.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                  ))}
+                  {topics.length === 0
+                    ? <SelectEmpty message={topicsLoading ? 'Loading...' : 'No records found'} />
+                    : topics.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                      ))}
                 </SelectContent>
               </Select>
             )}
@@ -287,12 +343,16 @@ export default function TestForm({ initialData, testId }: TestFormProps) {
                 disabled={!selectedTopic || subTopicsLoading}
               >
                 <SelectTrigger className="h-11 border-gray-200 text-gray-500">
-                  <SelectValue placeholder={subTopicsLoading ? 'Loading...' : 'Choose from Drop-down'} />
+                  <SelectValue placeholder={subTopicsLoading ? 'Loading...' : 'Choose from Drop-down'}>
+                    {field.value ? (subTopics.find(st => st.id === field.value)?.name ?? null) : null}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {subTopics.map((st) => (
-                    <SelectItem key={st.id} value={st.id}>{st.name}</SelectItem>
-                  ))}
+                  {subTopics.length === 0
+                    ? <SelectEmpty message={subTopicsLoading ? 'Loading...' : 'No records found'} />
+                    : subTopics.map((st) => (
+                        <SelectItem key={st.id} value={st.id}>{st.name}</SelectItem>
+                      ))}
                 </SelectContent>
               </Select>
             )}

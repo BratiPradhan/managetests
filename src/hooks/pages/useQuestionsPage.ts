@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { getTestById, publishTest, updateTest } from '@/services/test.service'
+import { getTestById, updateTest } from '@/services/test.service'
 import { bulkCreateQuestions, fetchBulkQuestions } from '@/services/question.service'
 import { useTopics } from '@/hooks/useTopics'
 import { useTestFlowStore } from '@/store/testFlow.store'
@@ -9,16 +9,15 @@ import { QuestionFormValues } from '@/lib/validations/question.schema'
 
 export function useQuestionsPage(id: string) {
   const router = useRouter()
-  const { questions, setQuestions, setTestId, reset } = useTestFlowStore()
+  const { questions, addQuestion, updateQuestion, removeQuestion, setQuestions, setTestId } =
+    useTestFlowStore()
 
   const [test, setTest] = useState<Test | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [publishing, setPublishing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [currentIndex, setCurrentIndex] = useState(0)
-  // Incremented to force QuestionEditor remount (e.g. after Delete All Edits)
-  const [editorResetKey, setEditorResetKey] = useState(0)
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [formKey, setFormKey] = useState(0)
 
   const { topics } = useTopics(test?.subject ?? null)
   const topicOptions = useMemo(
@@ -45,51 +44,63 @@ export function useQuestionsPage(id: string) {
     load()
   }, [id])
 
-  const handleSaveQuestion = useCallback(
-    (values: QuestionFormValues, index: number) => {
-      const q: Question = { ...values, type: 'mcq', test_id: id }
-      const updated = [...questions]
-      if (index < updated.length) {
-        updated[index] = { ...updated[index], ...q }
-      } else {
-        while (updated.length < index) {
-          updated.push({ question: '', option1: '', option2: '', option3: '', option4: '', correct_option: '', type: 'mcq', test_id: id })
-        }
-        updated.push(q)
-      }
-      setQuestions(updated)
+  const resetForm = () => setFormKey((k) => k + 1)
+
+  const handleAdd = useCallback(
+    (values: QuestionFormValues) => {
+      const q: Question = { ...values, type: 'mcq', test_id: id, subject: test?.subject }
+      addQuestion(q)
+      resetForm()
     },
-    [questions, id, setQuestions]
+    [addQuestion, id, test?.subject]
   )
 
-  const handleNavigate = useCallback((newIndex: number) => {
-    setCurrentIndex(newIndex)
+  const handleUpdate = useCallback(
+    (values: QuestionFormValues) => {
+      if (editingIndex === null) return
+      const existing = questions[editingIndex]
+      updateQuestion(editingIndex, { ...existing, ...values, type: 'mcq', test_id: id, subject: test?.subject })
+      setEditingIndex(null)
+      resetForm()
+    },
+    [editingIndex, questions, updateQuestion, id, test?.subject]
+  )
+
+  const handleDelete = useCallback(
+    (index: number) => {
+      removeQuestion(index)
+      if (editingIndex === index) {
+        setEditingIndex(null)
+        resetForm()
+      }
+    },
+    [removeQuestion, editingIndex]
+  )
+
+  const handleEdit = useCallback((index: number) => {
+    setEditingIndex(index)
   }, [])
 
-  const handleDeleteAll = useCallback(() => {
-    const updated = [...questions]
-    updated[currentIndex] = {
-      question: '', option1: '', option2: '', option3: '', option4: '',
-      correct_option: '', type: 'mcq', test_id: id,
-    }
-    setQuestions(updated)
-    setEditorResetKey((k) => k + 1)
-  }, [questions, currentIndex, id, setQuestions])
+  const handleCancelEdit = useCallback(() => {
+    setEditingIndex(null)
+    resetForm()
+  }, [])
 
   const handleSaveAndContinue = useCallback(async () => {
-    const filled = questions.filter((q) => q.question?.trim())
-    if (filled.length === 0) {
+    if (questions.length === 0) {
       setError('Add at least one question before continuing.')
       return
     }
     setSaving(true)
     setError(null)
     try {
-      const newQs = filled.filter((q) => !q.id)
-      const existingIds = filled.filter((q) => q.id).map((q) => q.id!)
+      const newQs = questions.filter((q) => !q.id)
+      const existingIds = questions.filter((q) => q.id).map((q) => q.id!)
       let newIds: string[] = []
       if (newQs.length > 0) {
-        const created = await bulkCreateQuestions(newQs.map(({ id: _id, ...rest }) => rest))
+        const created = await bulkCreateQuestions(
+          newQs.map(({ id: _id, ...rest }) => rest)
+        )
         newIds = created.map((q) => q.id!)
       }
       const allIds = [...existingIds, ...newIds]
@@ -102,57 +113,42 @@ export function useQuestionsPage(id: string) {
     }
   }, [questions, id, router])
 
-  const handlePublish = useCallback(async () => {
-    setPublishing(true)
-    try {
-      await publishTest(id)
-      reset()
-      router.push('/dashboard')
-    } catch {
-      setError('Failed to publish.')
-    } finally {
-      setPublishing(false)
-    }
-  }, [id, reset, router])
+  const handleExit = useCallback(() => router.push('/dashboard'), [router])
 
-  const handleExit = useCallback(() => {
-    router.push('/dashboard')
-  }, [router])
-
-  const currentQuestion = currentIndex >= 0 ? questions[currentIndex] : undefined
-  const editorDefaultValues = useMemo<Partial<QuestionFormValues> | undefined>(() => {
-    if (!currentQuestion?.question) return undefined
+  const editingQuestion = editingIndex !== null ? questions[editingIndex] : null
+  const formDefaultValues = useMemo<Partial<QuestionFormValues> | undefined>(() => {
+    if (!editingQuestion) return undefined
     return {
-      question: currentQuestion.question,
-      option1: currentQuestion.option1,
-      option2: currentQuestion.option2,
-      option3: currentQuestion.option3,
-      option4: currentQuestion.option4,
-      correct_option: currentQuestion.correct_option as QuestionFormValues['correct_option'],
-      explanation: currentQuestion.explanation ?? '',
-      difficulty: currentQuestion.difficulty ?? '',
-      topic: currentQuestion.topic ?? '',
-      sub_topic: currentQuestion.sub_topic ?? '',
-      media_url: currentQuestion.media_url ?? '',
+      question: editingQuestion.question,
+      option1: editingQuestion.option1,
+      option2: editingQuestion.option2,
+      option3: editingQuestion.option3,
+      option4: editingQuestion.option4,
+      correct_option: editingQuestion.correct_option as QuestionFormValues['correct_option'],
+      explanation: editingQuestion.explanation ?? '',
+      difficulty: editingQuestion.difficulty ?? '',
+      topic: editingQuestion.topic ?? '',
+      sub_topic: editingQuestion.sub_topic ?? '',
+      media_url: editingQuestion.media_url ?? '',
     }
-  }, [currentQuestion])
+  }, [editingQuestion])
 
   return {
     test,
     loading,
     saving,
-    publishing,
     error,
     questions,
-    currentIndex,
-    editorDefaultValues,
-    editorResetKey,
+    editingIndex,
+    formKey,
+    formDefaultValues,
     topicOptions,
-    handleSaveQuestion,
-    handleNavigate,
-    handleDeleteAll,
+    handleAdd,
+    handleUpdate,
+    handleDelete,
+    handleEdit,
+    handleCancelEdit,
     handleSaveAndContinue,
-    handlePublish,
     handleExit,
   }
 }

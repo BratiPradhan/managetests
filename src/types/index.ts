@@ -45,6 +45,7 @@ export interface Test {
 export interface Question {
   id?: string
   type: string
+  subject?: string
   question: string
   option1: string
   option2: string
@@ -75,7 +76,7 @@ export interface CreateTestPayload {
   type: string
   subject: string
   topics: string[]
-  sub_topics: string[]
+  sub_topics?: string[]
   correct_marks: number
   wrong_marks: number
   unattempt_marks: number

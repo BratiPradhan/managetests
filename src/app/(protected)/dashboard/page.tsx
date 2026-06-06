@@ -2,10 +2,22 @@
 
 import { useDashboard } from '@/hooks/pages/useDashboard'
 import TestTable from '@/components/dashboard/TestTable'
+import Pagination from '@/components/common/Pagination'
 import { Button } from '@/components/ui/button'
 
 export default function DashboardPage() {
-  const { tests, loading, error, fetchTests, goToCreate } = useDashboard()
+  const {
+    tests,
+    totalTests,
+    loading,
+    error,
+    fetchTests,
+    goToCreate,
+    currentPage,
+    totalPages,
+    pageSize,
+    handlePageChange,
+  } = useDashboard()
 
   return (
     <div className="space-y-6">
@@ -13,7 +25,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-2xl font-semibold">Tests</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {tests.length} test{tests.length !== 1 ? 's' : ''} total
+            {totalTests} test{totalTests !== 1 ? 's' : ''} total
           </p>
         </div>
         <Button onClick={goToCreate}>+ Create New Test</Button>
@@ -26,7 +38,16 @@ export default function DashboardPage() {
         <div className="text-center py-16 text-destructive">{error}</div>
       )}
       {!loading && !error && (
-        <TestTable tests={tests} onDeleted={fetchTests} />
+        <>
+          <TestTable tests={tests} onDeleted={fetchTests} />
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalTests}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+          />
+        </>
       )}
     </div>
   )

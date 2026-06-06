@@ -20,18 +20,26 @@ interface TestTableProps {
   onDeleted: () => void
 }
 
+function formatDate(dateStr?: string) {
+  if (!dateStr) return '—'
+  return new Date(dateStr).toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function StatusBadge({ status }: { status: Test['status'] }) {
+  return (
+    <Badge variant={status === 'live' ? 'default' : 'secondary'} className="capitalize">
+      {status ?? 'draft'}
+    </Badge>
+  )
+}
+
 export default function TestTable({ tests, onDeleted }: TestTableProps) {
   const router = useRouter()
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
-
-  const formatDate = (dateStr?: string) => {
-    if (!dateStr) return '—'
-    return new Date(dateStr).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    })
-  }
 
   if (tests.length === 0) {
     return (
@@ -43,7 +51,8 @@ export default function TestTable({ tests, onDeleted }: TestTableProps) {
 
   return (
     <>
-      <div className="rounded-md border bg-background">
+      {/* ── Desktop table (md+) ─────────────────────────────────── */}
+      <div className="hidden md:block rounded-md border bg-background">
         <Table>
           <TableHeader>
             <TableRow>
@@ -58,33 +67,23 @@ export default function TestTable({ tests, onDeleted }: TestTableProps) {
             {tests.map((test) => (
               <TableRow key={test.id}>
                 <TableCell className="font-medium">{test.name}</TableCell>
-                <TableCell>{typeof test.subject === 'string' ? test.subject : (test.subject as { name?: string })?.name ?? '—'}</TableCell>
                 <TableCell>
-                  <Badge variant={test.status === 'live' ? 'default' : 'secondary'}>
-                    {test.status ?? 'draft'}
-                  </Badge>
+                  {typeof test.subject === 'string'
+                    ? test.subject
+                    : (test.subject as { name?: string })?.name ?? '—'}
+                </TableCell>
+                <TableCell>
+                  <StatusBadge status={test.status} />
                 </TableCell>
                 <TableCell>{formatDate(test.created_at)}</TableCell>
                 <TableCell className="text-right space-x-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => router.push(`/tests/${test.id}/edit`)}
-                  >
+                  <Button size="sm" variant="outline" onClick={() => router.push(`/tests/${test.id}/edit`)}>
                     Edit
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => router.push(`/tests/${test.id}/preview`)}
-                  >
+                  <Button size="sm" variant="outline" onClick={() => router.push(`/tests/${test.id}/preview`)}>
                     View
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => setDeleteTarget({ id: test.id, name: test.name })}
-                  >
+                  <Button size="sm" variant="destructive" onClick={() => setDeleteTarget({ id: test.id, name: test.name })}>
                     Delete
                   </Button>
                 </TableCell>
@@ -92,6 +91,39 @@ export default function TestTable({ tests, onDeleted }: TestTableProps) {
             ))}
           </TableBody>
         </Table>
+      </div>
+
+      {/* ── Mobile cards (< md) ─────────────────────────────────── */}
+      <div className="md:hidden space-y-3">
+        {tests.map((test) => (
+          <div key={test.id} className="bg-white border border-gray-100 rounded-xl p-4 space-y-3 shadow-sm">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="font-semibold text-gray-800 truncate">{test.name}</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {typeof test.subject === 'string'
+                    ? test.subject
+                    : (test.subject as { name?: string })?.name ?? '—'}
+                </p>
+              </div>
+              <StatusBadge status={test.status} />
+            </div>
+
+            <p className="text-xs text-gray-400">{formatDate(test.created_at)}</p>
+
+            <div className="flex gap-2 pt-1">
+              <Button size="sm" variant="outline" className="flex-1" onClick={() => router.push(`/tests/${test.id}/edit`)}>
+                Edit
+              </Button>
+              <Button size="sm" variant="outline" className="flex-1" onClick={() => router.push(`/tests/${test.id}/preview`)}>
+                View
+              </Button>
+              <Button size="sm" variant="destructive" className="flex-1" onClick={() => setDeleteTarget({ id: test.id, name: test.name })}>
+                Delete
+              </Button>
+            </div>
+          </div>
+        ))}
       </div>
 
       {deleteTarget && (

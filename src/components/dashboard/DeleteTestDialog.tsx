@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import {
   Dialog,
   DialogContent,
@@ -11,6 +11,8 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { deleteTest } from '@/services/test.service'
+import { queryClient } from '@/lib/query-client'
+import { QUERY_KEYS } from '@/lib/query-keys'
 
 interface DeleteTestDialogProps {
   testId: string
@@ -27,20 +29,15 @@ export default function DeleteTestDialog({
   onClose,
   onDeleted,
 }: DeleteTestDialogProps) {
-  const [loading, setLoading] = useState(false)
-
-  const handleDelete = async () => {
-    setLoading(true)
-    try {
-      await deleteTest(testId)
+  const { mutate: handleDelete, isPending: loading } = useMutation({
+    mutationFn: () => deleteTest(testId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tests })
       onDeleted()
-    } catch {
-      // silently close — parent will refresh
-    } finally {
-      setLoading(false)
       onClose()
-    }
-  }
+    },
+    onError: onClose,
+  })
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -55,7 +52,7 @@ export default function DeleteTestDialog({
           <Button variant="outline" onClick={onClose} disabled={loading}>
             Cancel
           </Button>
-          <Button variant="destructive" onClick={handleDelete} disabled={loading}>
+          <Button variant="destructive" onClick={() => handleDelete()} disabled={loading}>
             {loading ? 'Deleting...' : 'Delete'}
           </Button>
         </DialogFooter>

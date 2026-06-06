@@ -1,14 +1,11 @@
 "use client";
 
-import { useSyncExternalStore, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isAuthenticated } from "@/lib/auth";
 import Sidebar from "@/components/common/Sidebar";
 import TopHeader from "@/components/common/TopHeader";
 import { useUIStore } from "@/store/ui.store";
-
-// No-op subscription — localStorage auth state doesn't change externally
-const subscribe = () => () => {};
 
 export default function ProtectedLayout({
   children,
@@ -17,20 +14,17 @@ export default function ProtectedLayout({
 }) {
   const router = useRouter();
   const { sidebarOpen, closeSidebar } = useUIStore();
-
-  const authenticated = useSyncExternalStore(
-    subscribe,
-    () => isAuthenticated(),
-    () => false,
-  );
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!authenticated) {
+    if (isAuthenticated()) {
+      setReady(true);
+    } else {
       router.replace("/login");
     }
-  }, [authenticated, router]);
+  }, [router]);
 
-  if (!authenticated) return null;
+  if (!ready) return null;
 
   return (
     <div className="flex min-h-screen bg-gray-50">

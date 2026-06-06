@@ -1,60 +1,48 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { getTests } from "@/services/test.service";
-import { Test } from "@/types";
-import { PAGE_SIZE } from "@/lib/constants";
+import { useCallback, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useQuery } from '@tanstack/react-query'
+import { getTests } from '@/services/test.service'
+import { QUERY_KEYS } from '@/lib/query-keys'
+import { PAGE_SIZE } from '@/lib/constants'
 
 export function useDashboard() {
-  const router = useRouter();
-  const [allTests, setAllTests] = useState<Test[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const router = useRouter()
+  const [currentPage, setCurrentPage] = useState(1)
 
-  const fetchTests = useCallback(async (showLoading = true) => {
-    if (showLoading) setLoading(true);
-    setError(null);
-    try {
-      const data = await getTests();
-      setAllTests(data);
-      setCurrentPage(1);
-    } catch {
-      setError("Failed to load tests. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data: allTests = [], isLoading: loading, error, refetch } = useQuery({
+    queryKey: QUERY_KEYS.tests,
+    queryFn: getTests,
+  })
 
-  useEffect(() => {
-    const t = setTimeout(() => fetchTests(false), 0);
-    return () => clearTimeout(t);
-  }, [fetchTests]);
-
-  const totalPages = Math.ceil(allTests.length / PAGE_SIZE);
+  const totalPages = Math.ceil(allTests.length / PAGE_SIZE)
 
   const paginatedTests = useMemo(
-    () =>
-      allTests.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
-    [allTests, currentPage],
-  );
+    () => allTests.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [allTests, currentPage]
+  )
+
+  const fetchTests = useCallback(() => {
+    setCurrentPage(1)
+    refetch()
+  }, [refetch])
 
   const handlePageChange = useCallback((page: number) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [])
 
-  const goToCreate = useCallback(() => router.push("/tests/create"), [router]);
+  const goToCreate = useCallback(() => router.push('/tests/create'), [router])
 
   return {
     tests: paginatedTests,
     totalTests: allTests.length,
     loading,
-    error,
+    error: error ? 'Failed to load tests. Please try again.' : null,
     fetchTests,
     goToCreate,
     currentPage,
     totalPages,
     pageSize: PAGE_SIZE,
     handlePageChange,
-  };
+  }
 }

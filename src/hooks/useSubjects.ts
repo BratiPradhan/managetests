@@ -1,18 +1,16 @@
-import { useEffect, useState } from 'react'
-import { Subject } from '@/types'
+import { useQuery } from '@tanstack/react-query'
 import { getSubjects } from '@/services/subject.service'
+import { QUERY_KEYS } from '@/lib/query-keys'
 
 export const useSubjects = () => {
-  const [subjects, setSubjects] = useState<Subject[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data, isLoading, error } = useQuery({
+    queryKey: QUERY_KEYS.subjects,
+    queryFn: getSubjects,
+  })
 
-  useEffect(() => {
-    getSubjects()
-      .then(setSubjects)
-      .catch(() => setError('Failed to load subjects'))
-      .finally(() => setLoading(false))
-  }, [])
-
-  return { subjects, loading, error }
+  return {
+    subjects: data ?? [],
+    loading: isLoading,
+    error: error ? 'Failed to load subjects' : null,
+  }
 }

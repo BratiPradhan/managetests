@@ -1,18 +1,17 @@
-import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { getTestById } from '@/services/test.service'
-import { Test } from '@/types'
+import { QUERY_KEYS } from '@/lib/query-keys'
 
 export function useEditTest(id: string) {
-  const [test, setTest] = useState<Test | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data: test = null, isLoading: loading, error } = useQuery({
+    queryKey: QUERY_KEYS.test(id),
+    queryFn: () => getTestById(id),
+    enabled: !!id,
+  })
 
-  useEffect(() => {
-    getTestById(id)
-      .then(setTest)
-      .catch(() => setError('Failed to load test.'))
-      .finally(() => setLoading(false))
-  }, [id])
-
-  return { test, loading, error }
+  return {
+    test,
+    loading,
+    error: error ? 'Failed to load test.' : null,
+  }
 }

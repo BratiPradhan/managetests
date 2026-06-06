@@ -1,22 +1,18 @@
-import { useEffect, useState } from 'react'
-import { SubTopic } from '@/types'
-import { getSubTopicsByTopicIds } from '@/services/subject.service'
+import { useQuery } from '@tanstack/react-query'
+import { getSubTopicsByTopic } from '@/services/subject.service'
+import { QUERY_KEYS } from '@/lib/query-keys'
 
 export const useSubTopics = (topicIds: string[]) => {
-  const [subTopics, setSubTopics] = useState<SubTopic[]>([])
-  const [loading, setLoading] = useState(false)
+  const topicId = topicIds[0] ?? ''
 
-  useEffect(() => {
-    if (!topicIds.length) {
-      setSubTopics([])
-      return
-    }
-    setLoading(true)
-    getSubTopicsByTopicIds(topicIds)
-      .then(setSubTopics)
-      .catch(() => setSubTopics([]))
-      .finally(() => setLoading(false))
-  }, [JSON.stringify(topicIds)])
+  const { data, isLoading } = useQuery({
+    queryKey: QUERY_KEYS.subTopics(topicId),
+    queryFn: () => getSubTopicsByTopic(topicId),
+    enabled: !!topicId,
+  })
 
-  return { subTopics, loading }
+  return {
+    subTopics: data ?? [],
+    loading: isLoading,
+  }
 }

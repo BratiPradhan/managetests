@@ -1,22 +1,16 @@
-import { useEffect, useState } from 'react'
-import { Topic } from '@/types'
+import { useQuery } from '@tanstack/react-query'
 import { getTopicsBySubject } from '@/services/subject.service'
+import { QUERY_KEYS } from '@/lib/query-keys'
 
 export const useTopics = (subjectId: string | null) => {
-  const [topics, setTopics] = useState<Topic[]>([])
-  const [loading, setLoading] = useState(false)
+  const { data, isLoading } = useQuery({
+    queryKey: QUERY_KEYS.topics(subjectId ?? ''),
+    queryFn: () => getTopicsBySubject(subjectId!),
+    enabled: !!subjectId,
+  })
 
-  useEffect(() => {
-    if (!subjectId) {
-      setTopics([])
-      return
-    }
-    setLoading(true)
-    getTopicsBySubject(subjectId)
-      .then(setTopics)
-      .catch(() => setTopics([]))
-      .finally(() => setLoading(false))
-  }, [subjectId])
-
-  return { topics, loading }
+  return {
+    topics: data ?? [],
+    loading: isLoading,
+  }
 }

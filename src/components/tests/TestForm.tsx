@@ -1,16 +1,20 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm, Controller, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
+import { useMutation } from '@tanstack/react-query'
+import { queryClient } from '@/lib/query-client'
+import { QUERY_KEYS } from '@/lib/query-keys'
 import { ChevronUp, ChevronDown } from 'lucide-react'
 import { testSchema, TestFormValues } from '@/lib/validations/test.schema'
 import { createTest, updateTest } from '@/services/test.service'
-import { getTopicsBySubject, getSubTopicsByTopic } from '@/services/subject.service'
 import { useSubjects } from '@/hooks/useSubjects'
+import { useTopics } from '@/hooks/useTopics'
+import { useSubTopics } from '@/hooks/useSubTopics'
 import { useTestFlowStore } from '@/store/testFlow.store'
-import { Test, Topic, SubTopic } from '@/types'
+import { Test } from '@/types'
 import { cn } from '@/lib/utils'
 import SelectEmpty from '@/components/ui/select-empty'
 import {
@@ -90,10 +94,6 @@ export default function TestForm({ initialData, testId }: TestFormProps) {
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   const { subjects, loading: subjectsLoading } = useSubjects()
-  const [topics, setTopics] = useState<Topic[]>([])
-  const [subTopics, setSubTopics] = useState<SubTopic[]>([])
-  const [topicsLoading, setTopicsLoading] = useState(false)
-  const [subTopicsLoading, setSubTopicsLoading] = useState(false)
 
   const form = useForm<TestFormValues>({
     resolver: zodResolver(testSchema),
@@ -113,40 +113,30 @@ export default function TestForm({ initialData, testId }: TestFormProps) {
     },
   })
 
-  const { watch, setValue, formState: { errors, isSubmitting } } = form
+  const { setValue, formState: { errors, isSubmitting } } = form
 
-  const selectedSubject = watch('subject')
-  const selectedTopic = watch('topic')
+  const selectedSubject = useWatch({ control: form.control, name: 'subject' })
+  const selectedTopic = useWatch({ control: form.control, name: 'topic' })
+
+  const { topics, loading: topicsLoading } = useTopics(isUUID(selectedSubject) ? selectedSubject : null)
+  const { subTopics, loading: subTopicsLoading } = useSubTopics(isUUID(selectedTopic) ? [selectedTopic] : [])
 
   // Refs holding raw name strings from initialData — used to resolve name→UUID after data loads
   const pendingSubjectName = useRef<string | null>(null)
   const pendingTopicName = useRef<string | null>(null)
   const pendingSubTopicName = useRef<string | null>(null)
 
-  // Fetch topics when subject changes — skip if value is a name string (not a UUID)
+  // Clear downstream fields when subject changes (fetch is handled by useTopics)
   useEffect(() => {
-    if (!selectedSubject) { setTopics([]); return }
     if (!isUUID(selectedSubject)) return
-    setTopicsLoading(true)
     setValue('topic', '')
     setValue('sub_topic', '')
-    setSubTopics([])
-    getTopicsBySubject(selectedSubject)
-      .then(setTopics)
-      .catch(() => setTopics([]))
-      .finally(() => setTopicsLoading(false))
   }, [selectedSubject, setValue])
 
-  // Fetch sub-topics when topic changes — skip if value is a name string
+  // Clear sub_topic when topic changes (fetch is handled by useSubTopics)
   useEffect(() => {
-    if (!selectedTopic) { setSubTopics([]); return }
     if (!isUUID(selectedTopic)) return
-    setSubTopicsLoading(true)
     setValue('sub_topic', '')
-    getSubTopicsByTopic(selectedTopic)
-      .then(setSubTopics)
-      .catch(() => setSubTopics([]))
-      .finally(() => setSubTopicsLoading(false))
   }, [selectedTopic, setValue])
 
   // Pre-populate for edit mode — store names in refs for UUID resolution below
@@ -204,41 +194,45 @@ export default function TestForm({ initialData, testId }: TestFormProps) {
     }
   }, [subTopics, setValue])
 
-  const save = async (values: TestFormValues) => {
-    const payload = {
-      name: values.name,
-      type: values.type,
-      subject: values.subject,
-      topics: values.topic ? [values.topic] : [],
-      // Omit sub_topics entirely when empty — API rejects []
-      ...(values.sub_topic ? { sub_topics: [values.sub_topic] } : {}),
-      difficulty: values.difficulty,
-      correct_marks: values.correct_marks,
-      wrong_marks: values.wrong_marks,
-      unattempt_marks: values.unattempt_marks,
-      total_time: values.total_time,
-      total_marks: values.total_marks,
-      total_questions: values.total_questions,
-      status: 'draft' as const,
-    }
-    if (testId) {
-      await updateTest(testId, payload)
-      return testId
-    }
-    const test = await createTest(payload)
-    return test.id
-  }
+  const buildPayload = (values: TestFormValues) => ({
+    name: values.name,
+    type: values.type,
+    subject: values.subject,
+    topics: values.topic ? [values.topic] : [],
+    ...(values.sub_topic ? { sub_topics: [values.sub_topic] } : {}),
+    difficulty: values.difficulty,
+    correct_marks: values.correct_marks,
+    wrong_marks: values.wrong_marks,
+    unattempt_marks: values.unattempt_marks,
+    total_time: values.total_time,
+    total_marks: values.total_marks,
+    total_questions: values.total_questions,
+    status: 'draft' as const,
+  })
+
+  const { mutateAsync: saveTest } = useMutation({
+    mutationFn: async (values: TestFormValues) => {
+      const payload = buildPayload(values)
+      if (testId) {
+        await updateTest(testId, payload)
+        return testId
+      }
+      const test = await createTest(payload)
+      return test.id
+    },
+    onSuccess: (id) => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tests })
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.test(id) })
+    },
+    onError: () => setSubmitError('Failed to save. Please try again.'),
+  })
 
   const handleNext = form.handleSubmit(async (values) => {
     setSubmitError(null)
-    try {
-      const id = await save(values)
-      setStoreTestId(id)
-      setTestData(values as Partial<Test>)
-      router.push(`/tests/${id}/questions`)
-    } catch {
-      setSubmitError('Failed to save. Please try again.')
-    }
+    const id = await saveTest(values)
+    setStoreTestId(id)
+    setTestData(values as Partial<Test>)
+    router.push(`/tests/${id}/questions`)
   })
 
   return (

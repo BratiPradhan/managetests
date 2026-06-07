@@ -73,7 +73,7 @@ export default function QuestionForm({
       <div className="space-y-1">
         <Label>Question </Label>
         <Textarea
-          placeholder="Enter the question text"
+          placeholder="Enter the question..."
           rows={3}
           {...form.register("question")}
         />

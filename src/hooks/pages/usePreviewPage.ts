@@ -4,6 +4,7 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { getTestById, publishTest } from '@/services/test.service'
 import { fetchBulkQuestions } from '@/services/question.service'
 import { useTestFlowStore } from '@/store/testFlow.store'
+import { queryClient } from '@/lib/query-client'
 import { QUERY_KEYS } from '@/lib/query-keys'
 
 export function usePreviewPage(id: string) {
@@ -28,6 +29,8 @@ export function usePreviewPage(id: string) {
   const { mutate: publish, isPending: publishing } = useMutation({
     mutationFn: () => publishTest(id),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tests })
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.test(id) })
       setPublished(true)
       reset()
       setTimeout(() => router.push('/dashboard'), 1500)

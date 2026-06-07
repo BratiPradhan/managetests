@@ -39,7 +39,7 @@ export default function Sidebar() {
           alt="Company Logo"
           width={120}
           height={40}
-          className="w-auto h-10 object-contain"
+          className="h-10 object-contain"
         />
         {/* Close button — mobile only */}
         <button

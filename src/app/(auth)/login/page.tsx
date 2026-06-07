@@ -38,7 +38,7 @@ export default function LoginPage() {
             alt="Company Logo"
             width={120}
             height={40}
-            className="w-auto h-10 object-contain"
+            className="h-10 object-contain"
           />
         </div>
 

@@ -7,6 +7,7 @@ import {
   fetchBulkQuestions,
 } from "@/services/question.service";
 import { useTestFlowStore } from "@/store/testFlow.store";
+import { queryClient } from "@/lib/query-client";
 import { QUERY_KEYS } from "@/lib/query-keys";
 import { Question } from "@/types";
 import { QuestionFormValues } from "@/lib/validations/question.schema";
@@ -111,7 +112,11 @@ export function useQuestionsPage(id: string) {
       });
       return allIds;
     },
-    onSuccess: () => router.push(`/tests/${id}/preview`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.test(id) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.questions([]) });
+      router.push(`/tests/${id}/preview`);
+    },
     onError: () => setError("Failed to save questions. Please try again."),
   });
 

@@ -21,8 +21,8 @@ A test management admin panel — create tests, add questions, preview, and publ
 ```bash
 pnpm install
 
-# create .env.local with the API base URL
-echo "NEXT_PUBLIC_API_URL=https://your-backend.example.com/api" > .env.local
+# create .env.local with the backend URL (server-only — see "API access & CORS" below)
+echo "BACKEND_API_URL=https://your-backend.example.com/api" > .env.local
 
 pnpm dev   # http://localhost:3000
 ```
@@ -85,6 +85,22 @@ src/
   directly.
 - Minimise `"use client"` — keep it at the leaves (forms, interactive widgets) where hooks/state
   are actually needed.
+
+## API access & CORS
+
+The browser never calls the backend directly. `lib/axios.ts` points `apiClient` at the relative
+`/api` path (same-origin), and `next.config.ts` rewrites `/api/:path*` to `${BACKEND_API_URL}/:path*`
+server-side. This means:
+
+- The browser only ever talks to our own deployed origin → **no CORS issues**, regardless of
+  whether the backend's allow-list includes our Vercel domain (preview-deployment URLs change
+  per-branch, so a static backend allow-list wouldn't keep up anyway).
+- The actual cross-origin request happens **server-to-server** (Vercel function → Railway
+  backend), which isn't subject to browser CORS policy at all.
+
+Set **`BACKEND_API_URL`** (server-only — no `NEXT_PUBLIC_` prefix, never sent to the browser) to
+the backend's full API base URL, both in `.env.local` for local dev and in your Vercel project's
+environment variables for deployed builds.
 
 ## Auth
 

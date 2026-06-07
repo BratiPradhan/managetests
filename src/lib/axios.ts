@@ -2,7 +2,9 @@ import axios from 'axios'
 import { getToken } from '@/lib/auth'
 
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
+  // Same-origin path — proxied to BACKEND_API_URL via the rewrite in next.config.ts
+  // so the browser never makes a cross-origin request (avoids CORS).
+  baseURL: '/api',
   headers: { 'Content-Type': 'application/json' },
 })
 

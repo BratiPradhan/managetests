@@ -1,36 +1,94 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Manage Tests
 
-## Getting Started
+A test management admin panel — create tests, add questions, preview, and publish them. Built with Next.js (App Router), TypeScript, TanStack Query, and Zustand on top of a REST backend.
 
-First, run the development server:
+## Stack
+
+- **Framework:** Next.js 16 (App Router), React 19, TypeScript 5
+- **Server state:** TanStack Query (`@tanstack/react-query`) + Axios
+- **Client/UI state:** Zustand
+- **Forms & validation:** react-hook-form + Zod
+- **Styling/UI:** Tailwind CSS 4, shadcn/ui (Radix / `@base-ui/react`)
+- **Tooling:** pnpm
+
+## Prerequisites
+
+- Node.js 20+
+- pnpm 9+
+
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+
+# create .env.local with the API base URL
+echo "NEXT_PUBLIC_API_URL=https://your-backend.example.com/api" > .env.local
+
+pnpm dev   # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+You'll need a valid login (`userId` / `password`) issued by the backend — there's no local seed/mock data.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command       | Description                          |
+| ------------- | ------------------------------------ |
+| `pnpm dev`    | Run the dev server (Turbopack)       |
+| `pnpm build`  | Production build + type check        |
+| `pnpm start`  | Run the production build             |
+| `pnpm lint`   | Run ESLint                           |
 
-## Learn More
+## Project structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+  app/                  Routes (App Router)
+    (auth)/login/       Public login page
+    (protected)/        Authenticated app shell (layout does the auth gate)
+      dashboard/        Test list
+      tests/create/     New test wizard — step 1
+      tests/[id]/edit/        Edit an existing test
+      tests/[id]/questions/   Add/edit questions — step 2
+      tests/[id]/preview/     Review & publish — step 3
+  components/
+    common/             App chrome: Sidebar, TopHeader, Pagination, QueryProvider
+    dashboard/          Dashboard-only UI (TestTable, DeleteTestDialog)
+    tests/              Test/question forms, editors, previews
+    auth/               LoginForm
+    ui/                 Generic shadcn/ui primitives (button, select, dialog, …)
+  hooks/
+    pages/              One hook per route — owns that page's data + interactions
+                        (useDashboard, useQuestionsPage, usePreviewPage, …)
+    use*.ts             Shared data hooks (subjects/topics/sub-topics)
+  services/             Thin API wrappers around Axios (test, question, subject, auth)
+  store/                Zustand stores (testFlow, ui)
+  lib/                  axios client, auth/token helpers, query client + keys,
+                        Zod schemas, misc utils/constants
+  types/                Shared TypeScript types (mirrors API shapes)
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Conventions
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Pages stay thin.** A route's `page.tsx` wires together a `hooks/pages/use*` hook (all the
+  data fetching, mutations, and handlers) and presentational components — see
+  `app/(protected)/dashboard/page.tsx` + `hooks/pages/useDashboard.ts` as the reference pair.
+  This keeps the business layer (hooks/services/stores) separate from the view layer (components).
+- **Server data → TanStack Query, transient UI/flow state → Zustand.** See `WRITEUP.md` for the
+  reasoning. Query keys live in `lib/query-keys.ts`; always invalidate the relevant key(s) in a
+  mutation's `onSuccess` (look at `TestForm.tsx` or `useQuestionsPage.ts` for the pattern) so
+  dependent pages don't show stale data.
+- **Validation lives in `lib/validations/*.schema.ts`** as Zod schemas, wired into
+  react-hook-form via `zodResolver`. Forms infer their types from the schema
+  (`z.infer<typeof schema>`).
+- **API access goes through `services/*.ts`**, which call the shared `apiClient` in `lib/axios.ts`
+  (handles the auth header and 401 redirect-to-login). Components/hooks should not call Axios
+  directly.
+- Minimise `"use client"` — keep it at the leaves (forms, interactive widgets) where hooks/state
+  are actually needed.
 
-## Deploy on Vercel
+## Auth
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Login posts `{ userId, password }` to `/auth/login`, stores the returned token via
+`lib/auth.ts` (`localStorage`), and the Axios instance attaches it as a `Bearer` header on every
+request. A 401 response clears the token and redirects to `/login`. The `(protected)` layout
+gates all authenticated routes client-side with `isAuthenticated()`.

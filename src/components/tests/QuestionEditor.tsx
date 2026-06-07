@@ -220,11 +220,11 @@ export default function QuestionEditor({
                   onClick={() => field.onChange(key)}
                   className={cn(
                     "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
-                    field.value === key ? "border-blue-500" : "border-gray-300",
+                    field.value === key ? "border-brand" : "border-gray-300",
                   )}
                 >
                   {field.value === key && (
-                    <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-brand" />
                   )}
                 </button>
                 <input

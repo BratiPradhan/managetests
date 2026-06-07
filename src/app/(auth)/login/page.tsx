@@ -26,6 +26,7 @@ export default function LoginPage() {
           width={400}
           height={400}
           className="w-auto h-80 object-contain"
+          loading="eager"
         />
       </div>
 
@@ -39,6 +40,7 @@ export default function LoginPage() {
             width={120}
             height={40}
             className="h-10 object-contain"
+            loading="eager"
           />
         </div>
 

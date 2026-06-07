@@ -1,12 +1,12 @@
-'use client'
+"use client";
 
-import { useParams } from 'next/navigation'
-import { usePreviewPage } from '@/hooks/pages/usePreviewPage'
-import TestPreview from '@/components/tests/TestPreview'
-import { Button } from '@/components/ui/button'
+import { useParams } from "next/navigation";
+import { usePreviewPage } from "@/hooks/pages/usePreviewPage";
+import TestPreview from "@/components/tests/TestPreview";
+import { Button } from "@/components/ui/button";
 
 export default function PreviewPage() {
-  const { id } = useParams<{ id: string }>()
+  const { id } = useParams<{ id: string }>();
   const {
     test,
     questions,
@@ -17,14 +17,23 @@ export default function PreviewPage() {
     handlePublish,
     goToEdit,
     goToQuestions,
-  } = usePreviewPage(id)
+  } = usePreviewPage(id);
+  const disabledWhenPublished = publishing || test?.status === "live";
 
   if (loading) {
-    return <div className="text-center py-16 text-muted-foreground">Loading preview...</div>
+    return (
+      <div className="text-center py-16 text-muted-foreground">
+        Loading preview...
+      </div>
+    );
   }
 
   if (!test) {
-    return <div className="text-center py-16 text-destructive">{error ?? 'Test not found.'}</div>
+    return (
+      <div className="text-center py-16 text-destructive">
+        {error ?? "Test not found."}
+      </div>
+    );
   }
 
   if (published) {
@@ -32,9 +41,11 @@ export default function PreviewPage() {
       <div className="text-center py-24 space-y-3">
         <div className="text-4xl">🎉</div>
         <h2 className="text-xl font-semibold">Test Published!</h2>
-        <p className="text-sm text-muted-foreground">Redirecting to dashboard...</p>
+        <p className="text-sm text-muted-foreground">
+          Redirecting to dashboard...
+        </p>
       </div>
-    )
+    );
   }
 
   return (
@@ -42,17 +53,35 @@ export default function PreviewPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Preview & Publish</h1>
-          <p className="text-sm text-muted-foreground mt-1">Review your test before publishing</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Review your test before publishing
+          </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={goToEdit} disabled={publishing}>
+          <Button
+            variant="outline"
+            onClick={goToEdit}
+            disabled={disabledWhenPublished}
+          >
             Edit Test
           </Button>
-          <Button variant="outline" onClick={goToQuestions} disabled={publishing}>
+          <Button
+            variant="outline"
+            onClick={goToQuestions}
+            disabled={disabledWhenPublished}
+          >
             Edit Questions
           </Button>
-          <Button onClick={handlePublish} disabled={publishing || test.status === 'live'}>
-            {publishing ? 'Publishing...' : test.status === 'live' ? 'Already Published' : 'Publish Test'}
+          <Button
+            onClick={handlePublish}
+            disabled={disabledWhenPublished}
+            className="bg-brand text-white hover:bg-brand/90"
+          >
+            {publishing
+              ? "Publishing..."
+              : test.status === "live"
+                ? "Already Published"
+                : "Publish Test"}
           </Button>
         </div>
       </div>
@@ -61,5 +90,5 @@ export default function PreviewPage() {
 
       <TestPreview test={test} questions={questions} />
     </div>
-  )
+  );
 }

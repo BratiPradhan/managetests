@@ -29,7 +29,7 @@ export default function Sidebar() {
         // Desktop: static, always visible
         "lg:static lg:translate-x-0 lg:z-auto lg:transition-none",
         // Mobile open/close
-        sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        sidebarOpen ? "translate-x-0" : "-translate-x-full",
       )}
     >
       {/* Logo */}
@@ -40,6 +40,7 @@ export default function Sidebar() {
           width={120}
           height={40}
           className="h-10 object-contain"
+          loading="eager"
         />
         {/* Close button — mobile only */}
         <button
@@ -47,8 +48,18 @@ export default function Sidebar() {
           className="lg:hidden text-gray-400 hover:text-gray-600 p-1"
           aria-label="Close menu"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
       </div>
@@ -66,7 +77,7 @@ export default function Sidebar() {
                 "relative flex items-center gap-3 py-2.5 pr-4 pl-5 text-sm font-medium transition-colors",
                 active
                   ? "text-blue-600 bg-blue-50 before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-blue-600 before:rounded-r"
-                  : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+                  : "text-gray-500 hover:text-gray-800 hover:bg-gray-50",
               )}
             >
               <Icon className="w-4 h-4 shrink-0" />

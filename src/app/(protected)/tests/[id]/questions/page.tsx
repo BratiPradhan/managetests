@@ -3,8 +3,9 @@
 import { useParams } from "next/navigation";
 import { useQuestionsPage } from "@/hooks/pages/useQuestionsPage";
 import QuestionForm from "@/components/tests/QuestionForm";
+import QuestionSidebar from "@/components/tests/QuestionSidebar";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 
 export default function QuestionsPage() {
   const { id } = useParams<{ id: string }>();
@@ -45,53 +46,15 @@ export default function QuestionsPage() {
   return (
     <div className="flex gap-6 min-h-[calc(100vh-8rem)]">
       {/* ── Left drawer — added questions ─────────────────────── */}
-      <aside className="w-56 shrink-0 hidden md:flex flex-col gap-3">
-        <div className="bg-white rounded-xl border border-gray-100 p-3">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-            Question Creation
-          </p>
-          <p className="text-sm text-gray-600 mb-3">
-            Total:{" "}
-            <span className="font-semibold text-gray-800">
-              {questions.length}
-            </span>
-          </p>
-
-          {questions.length === 0 ? (
-            <p className="text-xs text-gray-400 text-center py-4">
-              No questions yet
-            </p>
-          ) : (
-            <ul className="space-y-1.5">
-              {questions.map((q, i) => (
-                <li
-                  key={i}
-                  className={`group flex items-center gap-2 rounded-lg px-2 py-1.5 cursor-pointer transition-colors ${
-                    editingIndex === i ? "bg-blue-50" : "hover:bg-gray-50"
-                  }`}
-                  onClick={() => handleEdit(i)}
-                >
-                  <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
-                  <span className="flex-1 text-sm text-gray-700 truncate">
-                    Q{i + 1}: {q.question.slice(0, 24)}
-                    {q.question.length > 24 ? "…" : ""}
-                  </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(i);
-                    }}
-                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all"
-                    aria-label="Delete question"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </aside>
+      <div className="hidden md:block shrink-0 self-start">
+        <QuestionSidebar
+          questions={questions}
+          totalQuestions={test.total_questions}
+          currentIndex={editingIndex}
+          onSelect={handleEdit}
+          onAddQuestion={handleCancelEdit}
+        />
+      </div>
 
       {/* ── Main content ──────────────────────────────────────── */}
       <div className="flex-1 flex flex-col gap-5 min-w-0">
@@ -188,7 +151,7 @@ export default function QuestionsPage() {
           <button
             onClick={handleSaveAndContinue}
             disabled={saving || questions.length === 0}
-            className="px-8 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold text-white transition-colors"
+            className="px-8 py-2.5 rounded-lg bg-brand hover:bg-brand/90 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold text-white transition-colors"
           >
             {saving ? "Saving..." : "Save & Continue"}
           </button>

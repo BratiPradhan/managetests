@@ -31,10 +31,20 @@ export function useQuestionsPage(id: string) {
   const { data: test = null, isLoading: testLoading } = useQuery({
     queryKey: QUERY_KEYS.test(id),
     queryFn: async () => {
-      setTestId(id);
       const data = await getTestById(id);
-      // Load existing questions into Zustand if not already loaded
-      if (data.questions?.length && questions.length === 0) {
+      // The store may still hold another test's in-memory questions from
+      // earlier in the session — discard them when switching tests so we
+      // don't show stale data instead of fetching this test's questions.
+      const store = useTestFlowStore.getState();
+      const isDifferentTest = store.testId !== id;
+      if (isDifferentTest) {
+        setQuestions([]);
+      }
+      setTestId(id);
+      if (
+        data.questions?.length &&
+        (isDifferentTest || store.questions.length === 0)
+      ) {
         const existing = await fetchBulkQuestions(data.questions);
         setQuestions(existing);
       }

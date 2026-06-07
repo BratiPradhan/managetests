@@ -1,9 +1,9 @@
-'use client'
+"use client";
 
-import { useDashboard } from '@/hooks/pages/useDashboard'
-import TestTable from '@/components/dashboard/TestTable'
-import Pagination from '@/components/common/Pagination'
-import { Button } from '@/components/ui/button'
+import { useDashboard } from "@/hooks/pages/useDashboard";
+import TestTable from "@/components/dashboard/TestTable";
+import Pagination from "@/components/common/Pagination";
+import { Button } from "@/components/ui/button";
 
 export default function DashboardPage() {
   const {
@@ -17,7 +17,7 @@ export default function DashboardPage() {
     totalPages,
     pageSize,
     handlePageChange,
-  } = useDashboard()
+  } = useDashboard();
 
   return (
     <div className="space-y-6">
@@ -25,14 +25,21 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-2xl font-semibold">Tests</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {totalTests} test{totalTests !== 1 ? 's' : ''} total
+            {totalTests} test{totalTests !== 1 ? "s" : ""} total
           </p>
         </div>
-        <Button onClick={goToCreate}>+ Create New Test</Button>
+        <Button
+          className="bg-brand text-white hover:bg-brand/90"
+          onClick={goToCreate}
+        >
+          + Create New Test
+        </Button>
       </div>
 
       {loading && (
-        <div className="text-center py-16 text-muted-foreground">Loading tests...</div>
+        <div className="text-center py-16 text-muted-foreground">
+          Loading tests...
+        </div>
       )}
       {error && (
         <div className="text-center py-16 text-destructive">{error}</div>
@@ -50,5 +57,5 @@ export default function DashboardPage() {
         </>
       )}
     </div>
-  )
+  );
 }

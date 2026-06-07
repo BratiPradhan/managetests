@@ -1,7 +1,8 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
-import { ChevronDown, LogOut, Menu } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useDebouncedCallback } from "use-debounce";
+import { ChevronDown, LogOut, Menu, Search } from "lucide-react";
 import { getUser, removeToken } from "@/lib/auth";
 import { useState } from "react";
 import { User } from "@/types";
@@ -51,16 +52,29 @@ function getInitials(name?: string): string {
 export default function TopHeader() {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const crumbs = getBreadcrumbs(pathname);
   const [user] = useState<User | null>(() => getUser());
   const { toggleSidebar } = useUIStore();
 
   const displayName = user?.name ?? "Admin";
+  const isDashboard = pathname === "/dashboard";
 
   const handleLogout = () => {
     removeToken();
     router.replace("/login");
   };
+
+  const handleSearch = useDebouncedCallback((term: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("page", "1");
+    if (term) {
+      params.set("query", term);
+    } else {
+      params.delete("query");
+    }
+    router.replace(`${pathname}?${params.toString()}`);
+  }, 300);
 
   return (
     <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-4 md:px-6 shrink-0">
@@ -75,7 +89,7 @@ export default function TopHeader() {
         </button>
 
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-1.5 text-sm text-gray-400 min-w-0 overflow-hidden">
+        <nav className="hidden sm:flex items-center gap-1.5 text-sm text-gray-400 min-w-0 overflow-hidden">
           {crumbs.map((crumb, i) => (
             <span key={i} className="flex items-center gap-1.5 min-w-0">
               {i > 0 && <span className="shrink-0">/</span>}
@@ -83,7 +97,7 @@ export default function TopHeader() {
                 className={cn(
                   i === crumbs.length - 1
                     ? "text-gray-700 font-medium truncate"
-                    : "hidden sm:inline shrink-0"
+                    : "hidden sm:inline shrink-0",
                 )}
               >
                 {crumb}
@@ -92,6 +106,26 @@ export default function TopHeader() {
           ))}
         </nav>
       </div>
+
+      {/* Search — dashboard only */}
+      {isDashboard && (
+        <div className="flex flex-1 justify-center px-4 max-w-sm mx-auto">
+          <div className="relative w-full">
+            <label htmlFor="test-search" className="sr-only">
+              Search tests
+            </label>
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              id="test-search"
+              type="text"
+              placeholder="Search tests..."
+              defaultValue={searchParams.get("query")?.toString()}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="w-full rounded-lg border border-gray-200 bg-transparent py-2 pl-9 pr-3 text-sm outline-none focus:border-gray-300 focus:ring-3 focus:ring-gray-100 placeholder:text-gray-400"
+            />
+          </div>
+        </div>
+      )}
 
       {/* User dropdown */}
       <DropdownMenu>
@@ -108,7 +142,9 @@ export default function TopHeader() {
 
         <DropdownMenuContent align="end" className="w-44">
           <div className="px-2 py-1.5">
-            <p className="text-sm font-medium text-gray-800 truncate">{displayName}</p>
+            <p className="text-sm font-medium text-gray-800 truncate">
+              {displayName}
+            </p>
             <p className="text-xs text-gray-400">Admin</p>
           </div>
           <DropdownMenuSeparator />

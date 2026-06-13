@@ -42,6 +42,7 @@ export default function Pagination({
       <div className="flex items-center gap-1">
         {/* Prev */}
         <button
+          type="button"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
           className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
@@ -62,6 +63,7 @@ export default function Pagination({
           ) : (
             <button
               key={page}
+              type="button"
               onClick={() => onPageChange(page)}
               className={cn(
                 "w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium transition-colors",
@@ -77,6 +79,7 @@ export default function Pagination({
 
         {/* Next */}
         <button
+          type="button"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
           className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"

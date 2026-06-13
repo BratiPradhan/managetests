@@ -44,6 +44,7 @@ export default function Sidebar() {
         />
         {/* Close button — mobile only */}
         <button
+          type="button"
           onClick={closeSidebar}
           className="lg:hidden text-gray-400 hover:text-gray-600 p-1"
           aria-label="Close menu"

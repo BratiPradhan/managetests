@@ -2,3 +2,11 @@ allowBuilds:
   msw: false
   sharp: false
   unrs-resolver: false
+
+# Delay installs until newly published releases have had time to be vetted
+# (a compromised version is typically caught & unpublished within hours).
+minimumReleaseAge: 10080
+
+# Reject packages whose trust signals (provenance, signatures) weaken
+# between updates.
+trustPolicy: no-downgrade

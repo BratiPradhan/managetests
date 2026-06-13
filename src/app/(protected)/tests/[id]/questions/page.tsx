@@ -115,7 +115,7 @@ export default function QuestionsPage() {
             </p>
             <ul className="space-y-2">
               {questions.map((q, i) => (
-                <li key={i} className="flex items-center gap-2 text-sm">
+                <li key={q.id ?? i} className="flex items-center gap-2 text-sm">
                   <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
                   <span className="flex-1 text-gray-700 truncate">
                     Q{i + 1}: {q.question}

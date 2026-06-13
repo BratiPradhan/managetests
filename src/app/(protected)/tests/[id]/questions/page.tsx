@@ -1,11 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuestionsPage } from "@/hooks/pages/useQuestionsPage";
 import QuestionForm from "@/components/tests/QuestionForm";
 import QuestionSidebar from "@/components/tests/QuestionSidebar";
 import { Badge } from "@/components/ui/badge";
-import { Pencil } from "lucide-react";
+import { BarChart3, BookOpen, Clock, FileText, Gauge, Pencil } from "lucide-react";
 
 export default function QuestionsPage() {
   const { id } = useParams<{ id: string }>();
@@ -18,6 +19,8 @@ export default function QuestionsPage() {
     editingIndex,
     formKey,
     formDefaultValues,
+    topicOptions,
+    subTopicOptions,
     handleAdd,
     handleUpdate,
     handleDelete,
@@ -59,22 +62,86 @@ export default function QuestionsPage() {
       {/* ── Main content ──────────────────────────────────────── */}
       <div className="flex-1 flex flex-col gap-5 min-w-0">
         {/* Test info card */}
-        <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <div className="flex items-center gap-3 flex-wrap">
+        <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-3">
+          <div className="flex items-center justify-between">
             <span className="bg-gray-800 text-white text-xs font-medium px-3 py-1 rounded-full capitalize">
               {test.type?.replace("_", " ") || "Chapter Wise"}
             </span>
-            <span className="font-semibold text-gray-800">{test.name}</span>
-            <Badge
-              variant="secondary"
-              className="capitalize text-green-700 bg-green-50 border-green-200 text-xs"
+            <Link
+              href={`/tests/${test.id}/edit`}
+              className="text-brand hover:text-brand/80 transition-colors"
+              aria-label="Edit test"
             >
+              <Pencil className="w-4 h-4" />
+            </Link>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <BookOpen className="w-5 h-5 text-brand" />
+            <span className="font-semibold text-gray-800">{test.name}</span>
+            <Badge className="capitalize bg-emerald-500 text-white gap-1">
+              <Gauge className="w-3 h-3" />
               {test.difficulty}
             </Badge>
-            <div className="ml-auto flex items-center gap-4 text-xs text-gray-400">
-              <span>⏱ {test.total_time} Min</span>
-              <span>📝 {test.total_questions} Q&apos;s</span>
-              <span>📊 {test.total_marks} Marks</span>
+          </div>
+
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-gray-400 w-20 shrink-0">Subject</span>
+              <span className="text-gray-400">:</span>
+              <span className="font-medium text-gray-700">{test.subject}</span>
+            </div>
+
+            {test.topics.length > 0 && (
+              <div className="flex items-start gap-2">
+                <span className="text-gray-400 w-20 shrink-0 pt-0.5">Topic</span>
+                <span className="text-gray-400 pt-0.5">:</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {test.topics.map((topic) => (
+                    <Badge
+                      key={topic}
+                      variant="outline"
+                      className="rounded-full text-amber-600 border-amber-300 bg-amber-50"
+                    >
+                      {topic}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              {test.sub_topics.length > 0 ? (
+                <div className="flex items-start gap-2">
+                  <span className="text-gray-400 w-20 shrink-0 pt-0.5">Sub Topic</span>
+                  <span className="text-gray-400 pt-0.5">:</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {test.sub_topics.map((subTopic) => (
+                      <Badge
+                        key={subTopic}
+                        variant="outline"
+                        className="rounded-full text-amber-600 border-amber-300 bg-amber-50"
+                      >
+                        {subTopic}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <span />
+              )}
+
+              <div className="ml-auto flex items-center gap-4 text-xs text-gray-400">
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5" /> {test.total_time} Min
+                </span>
+                <span className="flex items-center gap-1">
+                  <FileText className="w-3.5 h-3.5" /> {test.total_questions} Q&apos;s
+                </span>
+                <span className="flex items-center gap-1">
+                  <BarChart3 className="w-3.5 h-3.5" /> {test.total_marks} Marks
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -101,6 +168,8 @@ export default function QuestionsPage() {
           <QuestionForm
             key={formKey}
             defaultValues={formDefaultValues}
+            topicOptions={topicOptions}
+            subTopicOptions={subTopicOptions}
             isEditing={editingIndex !== null}
             onSubmit={editingIndex !== null ? handleUpdate : handleAdd}
             onCancel={editingIndex !== null ? handleCancelEdit : undefined}

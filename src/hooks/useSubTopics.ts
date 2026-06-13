@@ -1,14 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
-import { getSubTopicsByTopic } from '@/services/subject.service'
+import { getSubTopicsByTopicIds } from '@/services/subject.service'
 import { QUERY_KEYS } from '@/lib/query-keys'
 
 export const useSubTopics = (topicIds: string[]) => {
-  const topicId = topicIds[0] ?? ''
+  const sortedIds = [...topicIds].sort()
 
   const { data, isLoading } = useQuery({
-    queryKey: QUERY_KEYS.subTopics(topicId),
-    queryFn: () => getSubTopicsByTopic(topicId),
-    enabled: !!topicId,
+    queryKey: QUERY_KEYS.subTopics(sortedIds),
+    queryFn: () => getSubTopicsByTopicIds(sortedIds),
+    enabled: sortedIds.length > 0,
   })
 
   return {

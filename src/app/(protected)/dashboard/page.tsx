@@ -1,11 +1,20 @@
 "use client";
 
+import { Suspense } from "react";
 import { useDashboard } from "@/hooks/pages/useDashboard";
 import TestTable from "@/components/dashboard/TestTable";
 import Pagination from "@/components/common/Pagination";
 import { Button } from "@/components/ui/button";
 
 export default function DashboardPage() {
+  return (
+    <Suspense fallback={null}>
+      <DashboardContent />
+    </Suspense>
+  );
+}
+
+function DashboardContent() {
   const {
     tests,
     totalTests,

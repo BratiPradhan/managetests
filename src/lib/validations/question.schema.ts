@@ -12,6 +12,8 @@ export const questionSchema = z.object({
   explanation: z.string().optional(),
   difficulty: z.string().optional(),
   media_url: z.string().optional(),
+  topic: z.string().optional(),
+  sub_topic: z.string().optional(),
 });
 
 export type QuestionFormValues = z.infer<typeof questionSchema>;

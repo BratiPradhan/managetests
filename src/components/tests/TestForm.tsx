@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -16,7 +16,9 @@ import { useSubTopics } from "@/hooks/useSubTopics";
 import { useTestFlowStore } from "@/store/testFlow.store";
 import { Test } from "@/types";
 import { cn } from "@/lib/utils";
+import { resolveName, resolveNames } from "@/lib/resolveNames";
 import SelectEmpty from "@/components/ui/select-empty";
+import MultiSelect from "@/components/ui/multi-select";
 import {
   Select,
   SelectContent,
@@ -112,8 +114,8 @@ export default function TestForm({ initialData, testId }: TestFormProps) {
       name: "",
       type: "chapterwise",
       subject: "",
-      topic: "",
-      sub_topic: "",
+      topics: [],
+      sub_topics: [],
       difficulty: "easy",
       correct_marks: 5,
       wrong_marks: -1,
@@ -130,45 +132,63 @@ export default function TestForm({ initialData, testId }: TestFormProps) {
   } = form;
 
   const selectedSubject = useWatch({ control: form.control, name: "subject" });
-  const selectedTopic = useWatch({ control: form.control, name: "topic" });
+  const selectedTopics = useWatch({ control: form.control, name: "topics" });
 
   const { topics, loading: topicsLoading } = useTopics(
     isUUID(selectedSubject) ? selectedSubject : null,
   );
-  const { subTopics, loading: subTopicsLoading } = useSubTopics(
-    isUUID(selectedTopic) ? [selectedTopic] : [],
+  const validTopicIds = useMemo(
+    () => selectedTopics.filter(isUUID),
+    [selectedTopics],
   );
+  const { subTopics, loading: subTopicsLoading } = useSubTopics(validTopicIds);
 
-  // Refs holding raw name strings from initialData — used to resolve name→UUID after data loads
-  const pendingSubjectName = useRef<string | null>(null);
-  const pendingTopicName = useRef<string | null>(null);
-  const pendingSubTopicName = useRef<string | null>(null);
+  // Staged resolution of edit-mode names (subject/topics/sub_topics) to UUIDs
+  // as each dependent dropdown's options load.
+  const editResolution = useRef<{
+    subjectName: string | null;
+    topicNames: string[];
+    subTopicNames: string[];
+    stage: "subject" | "topics" | "subTopics";
+  } | null>(null);
 
-  // Clear downstream fields when subject changes (fetch is handled by useTopics)
+  // Clear topics/sub_topics when the user picks a different subject —
+  // but not while edit-mode resolution is populating them
   useEffect(() => {
     if (!isUUID(selectedSubject)) return;
-    setValue("topic", "");
-    setValue("sub_topic", "");
+    const res = editResolution.current;
+    if (res && (res.stage === "topics" || res.stage === "subTopics")) return;
+    setValue("topics", []);
+    setValue("sub_topics", []);
   }, [selectedSubject, setValue]);
 
-  // Clear sub_topic when topic changes (fetch is handled by useSubTopics)
+  // Prune sub_topics to only IDs still present in the freshly-fetched subTopics list
+  // when the topics selection changes — same guard
   useEffect(() => {
-    if (!isUUID(selectedTopic)) return;
-    setValue("sub_topic", "");
-  }, [selectedTopic, setValue]);
+    const res = editResolution.current;
+    if (res && (res.stage === "topics" || res.stage === "subTopics")) return;
+    if (subTopicsLoading) return;
+    const current = form.getValues("sub_topics");
+    const validIds = new Set(subTopics.map((st) => st.id));
+    const pruned = current.filter((id) => validIds.has(id));
+    if (pruned.length !== current.length) setValue("sub_topics", pruned);
+  }, [subTopics, subTopicsLoading, form, setValue]);
 
-  // Pre-populate for edit mode — store names in refs for UUID resolution below
+  // Stage 0 — capture raw names + pre-populate non-relational fields
   useEffect(() => {
     if (!initialData) return;
-    pendingSubjectName.current = initialData.subject;
-    pendingTopicName.current = initialData.topics?.[0] ?? null;
-    pendingSubTopicName.current = initialData.sub_topics?.[0] ?? null;
+    editResolution.current = {
+      subjectName: initialData.subject,
+      topicNames: initialData.topics ?? [],
+      subTopicNames: initialData.sub_topics ?? [],
+      stage: "subject",
+    };
     form.reset({
       name: initialData.name,
       type: initialData.type,
       subject: initialData.subject,
-      topic: initialData.topics?.[0] ?? "",
-      sub_topic: initialData.sub_topics?.[0] ?? "",
+      topics: [],
+      sub_topics: [],
       difficulty: initialData.difficulty,
       correct_marks: initialData.correct_marks,
       wrong_marks: initialData.wrong_marks,
@@ -179,45 +199,47 @@ export default function TestForm({ initialData, testId }: TestFormProps) {
     });
   }, [initialData, form]);
 
-  // Resolve subject name → UUID once subjects are loaded
+  // Stage 1 — subject name -> UUID once `subjects` loads
   useEffect(() => {
-    const name = pendingSubjectName.current;
-    if (!name || subjects.length === 0) return;
-    const match = subjects.find((s) => s.name === name || s.id === name);
-    if (match && !isUUID(name)) {
-      setValue("subject", match.id);
-      pendingSubjectName.current = null;
+    const res = editResolution.current;
+    if (!res || res.stage !== "subject" || subjects.length === 0) return;
+    const match = resolveName(res.subjectName, subjects);
+    if (!match) {
+      editResolution.current = null;
+      return;
     }
+    setValue("subject", match.id);
+    res.stage = "topics";
   }, [subjects, setValue]);
 
-  // Resolve topic name → UUID once topics are loaded
+  // Stage 2 — topic names[] -> UUIDs[] once `topics` loads for the resolved subject
   useEffect(() => {
-    const name = pendingTopicName.current;
-    if (!name || topics.length === 0) return;
-    const match = topics.find((t) => t.name === name || t.id === name);
-    if (match && !isUUID(name)) {
-      setValue("topic", match.id);
-      pendingTopicName.current = null;
+    const res = editResolution.current;
+    if (!res || res.stage !== "topics" || topics.length === 0) return;
+    const matches = resolveNames(res.topicNames, topics);
+    setValue("topics", matches.map((t) => t.id));
+    if (matches.length === 0 || res.subTopicNames.length === 0) {
+      editResolution.current = null;
+    } else {
+      res.stage = "subTopics";
     }
   }, [topics, setValue]);
 
-  // Resolve sub-topic name → UUID once sub-topics are loaded
+  // Stage 3 — sub-topic names[] -> UUIDs[] once `subTopics` loads for the resolved topics
   useEffect(() => {
-    const name = pendingSubTopicName.current;
-    if (!name || subTopics.length === 0) return;
-    const match = subTopics.find((st) => st.name === name || st.id === name);
-    if (match && !isUUID(name)) {
-      setValue("sub_topic", match.id);
-      pendingSubTopicName.current = null;
-    }
+    const res = editResolution.current;
+    if (!res || res.stage !== "subTopics" || subTopics.length === 0) return;
+    const matches = resolveNames(res.subTopicNames, subTopics);
+    setValue("sub_topics", matches.map((st) => st.id));
+    editResolution.current = null;
   }, [subTopics, setValue]);
 
   const buildPayload = (values: TestFormValues) => ({
     name: values.name,
     type: values.type,
     subject: values.subject,
-    topics: values.topic ? [values.topic] : [],
-    ...(values.sub_topic ? { sub_topics: [values.sub_topic] } : {}),
+    topics: values.topics,
+    ...(values.sub_topics.length ? { sub_topics: values.sub_topics } : {}),
     difficulty: values.difficulty,
     correct_marks: values.correct_marks,
     wrong_marks: values.wrong_marks,
@@ -254,7 +276,7 @@ export default function TestForm({ initialData, testId }: TestFormProps) {
   });
 
   return (
-    <form onSubmit={(e) => e.preventDefault()} className="space-y-8">
+    <form onSubmit={handleNext} className="space-y-8">
       {/* Tab switcher */}
       <Controller
         control={form.control}
@@ -327,43 +349,27 @@ export default function TestForm({ initialData, testId }: TestFormProps) {
 
       {/* Row 2: Topic + Sub Topic */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Field label="Topic" error={errors.topic?.message}>
+        <Field label="Topic" error={errors.topics?.message}>
           <Controller
             control={form.control}
-            name="topic"
+            name="topics"
             render={({ field }) => (
-              <Select
+              <MultiSelect
+                options={topics.map((t) => ({ value: t.id, label: t.name }))}
                 value={field.value}
-                onValueChange={field.onChange}
+                onChange={field.onChange}
                 disabled={!selectedSubject || topicsLoading}
-              >
-                <SelectTrigger className="h-11 border-gray-200 text-gray-500">
-                  <SelectValue
-                    placeholder={
-                      topicsLoading ? "Loading..." : "Choose from Drop-down"
-                    }
-                  >
-                    {field.value
-                      ? (topics.find((t) => t.id === field.value)?.name ?? null)
-                      : null}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {topics.length === 0 ? (
-                    <SelectEmpty
-                      message={
-                        topicsLoading ? "Loading..." : "No records found"
-                      }
-                    />
-                  ) : (
-                    topics.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>
-                        {t.name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+                placeholder={
+                  topicsLoading ? "Loading..." : "Choose from Drop-down"
+                }
+                emptyMessage={
+                  topicsLoading
+                    ? "Loading..."
+                    : !selectedSubject
+                      ? "Select a subject first"
+                      : "No records found"
+                }
+              />
             )}
           />
         </Field>
@@ -371,41 +377,24 @@ export default function TestForm({ initialData, testId }: TestFormProps) {
         <Field label="Sub Topic">
           <Controller
             control={form.control}
-            name="sub_topic"
+            name="sub_topics"
             render={({ field }) => (
-              <Select
-                value={field.value ?? ""}
-                onValueChange={field.onChange}
-                disabled={!selectedTopic || subTopicsLoading}
-              >
-                <SelectTrigger className="h-11 border-gray-200 text-gray-500">
-                  <SelectValue
-                    placeholder={
-                      subTopicsLoading ? "Loading..." : "Choose from Drop-down"
-                    }
-                  >
-                    {field.value
-                      ? (subTopics.find((st) => st.id === field.value)?.name ??
-                        null)
-                      : null}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {subTopics.length === 0 ? (
-                    <SelectEmpty
-                      message={
-                        subTopicsLoading ? "Loading..." : "No records found"
-                      }
-                    />
-                  ) : (
-                    subTopics.map((st) => (
-                      <SelectItem key={st.id} value={st.id}>
-                        {st.name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+              <MultiSelect
+                options={subTopics.map((st) => ({ value: st.id, label: st.name }))}
+                value={field.value}
+                onChange={field.onChange}
+                disabled={selectedTopics.length === 0 || subTopicsLoading}
+                placeholder={
+                  subTopicsLoading ? "Loading..." : "Choose from Drop-down"
+                }
+                emptyMessage={
+                  subTopicsLoading
+                    ? "Loading..."
+                    : selectedTopics.length === 0
+                      ? "Select a topic first"
+                      : "No records found"
+                }
+              />
             )}
           />
         </Field>
@@ -545,8 +534,7 @@ export default function TestForm({ initialData, testId }: TestFormProps) {
           Cancel
         </button>
         <button
-          type="button"
-          onClick={handleNext}
+          type="submit"
           disabled={isSubmitting}
           className="px-8 py-2.5 rounded-lg bg-brand hover:bg-brand/90 disabled:opacity-60 text-sm font-semibold text-white transition-colors"
         >

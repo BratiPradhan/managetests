@@ -11,6 +11,10 @@ import { queryClient } from "@/lib/query-client";
 import { QUERY_KEYS } from "@/lib/query-keys";
 import { Question } from "@/types";
 import { QuestionFormValues } from "@/lib/validations/question.schema";
+import { useSubjects } from "@/hooks/useSubjects";
+import { useTopics } from "@/hooks/useTopics";
+import { useSubTopics } from "@/hooks/useSubTopics";
+import { resolveName, resolveNames } from "@/lib/resolveNames";
 
 export function useQuestionsPage(id: string) {
   const router = useRouter();
@@ -52,6 +56,25 @@ export function useQuestionsPage(id: string) {
     },
     enabled: !!id,
   });
+
+  const { subjects } = useSubjects();
+  const resolvedSubject = useMemo(
+    () => resolveName(test?.subject ?? null, subjects),
+    [test?.subject, subjects],
+  );
+
+  const { topics } = useTopics(resolvedSubject?.id ?? null);
+  const topicOptions = useMemo(
+    () => resolveNames(test?.topics ?? [], topics),
+    [test?.topics, topics],
+  );
+
+  const topicIds = useMemo(() => topicOptions.map((t) => t.id), [topicOptions]);
+  const { subTopics } = useSubTopics(topicIds);
+  const subTopicOptions = useMemo(
+    () => resolveNames(test?.sub_topics ?? [], subTopics),
+    [test?.sub_topics, subTopics],
+  );
 
   const resetForm = () => setFormKey((k) => k + 1);
 
@@ -177,6 +200,8 @@ export function useQuestionsPage(id: string) {
     editingIndex,
     formKey,
     formDefaultValues,
+    topicOptions,
+    subTopicOptions,
     handleAdd,
     handleUpdate,
     handleDelete,

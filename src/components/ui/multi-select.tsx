@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { buttonVariants } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import SelectEmpty from '@/components/ui/select-empty'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -22,6 +23,7 @@ interface MultiSelectProps {
   onChange: (values: string[]) => void
   placeholder?: string
   disabled?: boolean
+  emptyMessage?: string
 }
 
 export default function MultiSelect({
@@ -30,6 +32,7 @@ export default function MultiSelect({
   onChange,
   placeholder = 'Select...',
   disabled,
+  emptyMessage = 'No options available',
 }: MultiSelectProps) {
   const toggle = (optValue: string, checked: boolean) => {
     onChange(checked ? [...value, optValue] : value.filter((v) => v !== optValue))
@@ -51,7 +54,7 @@ export default function MultiSelect({
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-72 max-h-60 overflow-y-auto">
           {options.length === 0 ? (
-            <p className="px-2 py-1.5 text-sm text-muted-foreground">No options available</p>
+            <SelectEmpty message={emptyMessage} />
           ) : (
             options.map((option) => (
               <DropdownMenuCheckboxItem

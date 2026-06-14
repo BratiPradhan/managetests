@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import DeleteTestDialog from './DeleteTestDialog'
 import { Test } from '@/types'
+import { getSubjectName } from '@/lib/resolveNames'
 
 interface TestTableProps {
   tests: Test[]
@@ -68,9 +69,7 @@ export default function TestTable({ tests, onDeleted }: TestTableProps) {
               <TableRow key={test.id}>
                 <TableCell className="font-medium">{test.name}</TableCell>
                 <TableCell>
-                  {typeof test.subject === 'string'
-                    ? test.subject
-                    : (test.subject as { name?: string })?.name ?? '—'}
+                  {getSubjectName(test.subject)}
                 </TableCell>
                 <TableCell>
                   <StatusBadge status={test.status} />
@@ -101,9 +100,7 @@ export default function TestTable({ tests, onDeleted }: TestTableProps) {
               <div className="min-w-0">
                 <p className="font-semibold text-gray-800 truncate">{test.name}</p>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  {typeof test.subject === 'string'
-                    ? test.subject
-                    : (test.subject as { name?: string })?.name ?? '—'}
+                  {getSubjectName(test.subject)}
                 </p>
               </div>
               <StatusBadge status={test.status} />

@@ -15,6 +15,12 @@ import { useTopics } from "@/hooks/useTopics";
 import { useSubTopics } from "@/hooks/useSubTopics";
 import { useTestFlowStore } from "@/store/testFlow.store";
 import { Test } from "@/types";
+import {
+  TEST_TYPES,
+  TEST_TYPE_LABELS,
+  DIFFICULTIES,
+  DIFFICULTY_LABELS,
+} from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { resolveName, resolveNames } from "@/lib/resolveNames";
 import SelectEmpty from "@/components/ui/select-empty";
@@ -27,14 +33,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const TEST_TABS = [
-  { label: "Chapter Wise", value: "chapterwise" },
-  { label: "PYQ", value: "pyq" },
-  { label: "Mock Test", value: "mock" },
-];
-
-const DIFFICULTIES = ["Easy", "Medium", "Difficult"];
-
 interface TestFormProps {
   initialData?: Test;
   testId?: string;
@@ -42,10 +40,12 @@ interface TestFormProps {
 
 // ── Number Spinner ───────────────────────────────────────────────────────────
 function NumberSpinner({
+  label,
   value,
   onChange,
   showSign = false,
 }: {
+  label: string;
   value: number;
   onChange: (v: number) => void;
   showSign?: boolean;
@@ -60,6 +60,7 @@ function NumberSpinner({
         <button
           type="button"
           onClick={() => onChange(value + 1)}
+          aria-label={`Increase ${label}`}
           className="flex-1 flex items-center justify-center px-2 hover:bg-gray-50 transition-colors"
         >
           <ChevronUp className="w-3 h-3 text-gray-400" />
@@ -67,6 +68,7 @@ function NumberSpinner({
         <button
           type="button"
           onClick={() => onChange(value - 1)}
+          aria-label={`Decrease ${label}`}
           className="flex-1 flex items-center justify-center px-2 hover:bg-gray-50 border-t border-gray-200 transition-colors"
         >
           <ChevronDown className="w-3 h-3 text-gray-400" />
@@ -283,19 +285,19 @@ export default function TestForm({ initialData, testId }: TestFormProps) {
         name="type"
         render={({ field }) => (
           <div className="inline-flex border border-gray-200 rounded-lg overflow-hidden">
-            {TEST_TABS.map((tab) => (
+            {TEST_TYPES.map((type) => (
               <button
-                key={tab.value}
+                key={type}
                 type="button"
-                onClick={() => field.onChange(tab.value)}
+                onClick={() => field.onChange(type)}
                 className={cn(
                   "px-5 py-2 text-sm font-medium transition-colors",
-                  field.value === tab.value
+                  field.value === type
                     ? "text-blue-600 border-b-2 border-blue-600 bg-white"
                     : "text-gray-400 hover:text-gray-600",
                 )}
               >
-                {tab.label}
+                {TEST_TYPE_LABELS[type]}
               </button>
             ))}
           </div>
@@ -418,15 +420,14 @@ export default function TestForm({ initialData, testId }: TestFormProps) {
             render={({ field }) => (
               <div className="flex items-center gap-6 h-11">
                 {DIFFICULTIES.map((d) => {
-                  const val = d.toLowerCase();
-                  const active = field.value === val;
+                  const active = field.value === d;
                   return (
                     <label
                       key={d}
                       className="flex items-center gap-2 cursor-pointer select-none"
                     >
                       <div
-                        onClick={() => field.onChange(val)}
+                        onClick={() => field.onChange(d)}
                         className={cn(
                           "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors cursor-pointer",
                           active ? "border-brand" : "border-gray-300",
@@ -436,7 +437,7 @@ export default function TestForm({ initialData, testId }: TestFormProps) {
                           <div className="w-2.5 h-2.5 rounded-full bg-brand" />
                         )}
                       </div>
-                      <span className="text-sm text-gray-700">{d}</span>
+                      <span className="text-sm text-gray-700">{DIFFICULTY_LABELS[d]}</span>
                     </label>
                   );
                 })}
@@ -457,6 +458,7 @@ export default function TestForm({ initialData, testId }: TestFormProps) {
               name="wrong_marks"
               render={({ field }) => (
                 <NumberSpinner
+                  label="Wrong Answer"
                   value={field.value}
                   onChange={field.onChange}
                   showSign
@@ -472,6 +474,7 @@ export default function TestForm({ initialData, testId }: TestFormProps) {
               name="unattempt_marks"
               render={({ field }) => (
                 <NumberSpinner
+                  label="Unattempted"
                   value={field.value}
                   onChange={field.onChange}
                   showSign
@@ -487,6 +490,7 @@ export default function TestForm({ initialData, testId }: TestFormProps) {
               name="correct_marks"
               render={({ field }) => (
                 <NumberSpinner
+                  label="Correct Answer"
                   value={field.value}
                   onChange={field.onChange}
                   showSign

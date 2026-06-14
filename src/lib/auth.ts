@@ -29,5 +29,13 @@ export const getUser = (): User | null => {
   if (typeof window === 'undefined') return null
   const raw = localStorage.getItem(USER_KEY)
   if (!raw) return null
-  try { return JSON.parse(raw) } catch { return null }
+  try {
+    const parsed = JSON.parse(raw)
+    if (parsed && typeof parsed === 'object' && typeof parsed.id === 'string') {
+      return parsed as User
+    }
+    return null
+  } catch {
+    return null
+  }
 }

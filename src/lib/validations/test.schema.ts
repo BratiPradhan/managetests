@@ -1,12 +1,13 @@
 import { z } from 'zod'
+import { TEST_TYPES, DIFFICULTIES } from '@/lib/constants'
 
 export const testSchema = z.object({
   name: z.string().min(1, 'Test name is required'),
-  type: z.string().min(1, 'Test type is required'),
+  type: z.enum(TEST_TYPES, { message: 'Test type is required' }),
   subject: z.string().min(1, 'Subject is required'),
   topics: z.array(z.string()).min(1, 'Select at least one topic'),
   sub_topics: z.array(z.string()),
-  difficulty: z.string().min(1, 'Difficulty is required'),
+  difficulty: z.enum(DIFFICULTIES, { message: 'Difficulty is required' }),
   correct_marks: z.number(),
   wrong_marks: z.number(),
   unattempt_marks: z.number(),

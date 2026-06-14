@@ -14,3 +14,12 @@ export function resolveNames(names: string[], pool: NamedEntity[]): NamedEntity[
     .map((name) => pool.find((p) => p.name === name || p.id === name))
     .filter((m): m is NamedEntity => !!m)
 }
+
+// Subject can arrive from the API as a plain string or a populated `{ name }` object.
+export function getSubjectName(subject: unknown): string {
+  if (typeof subject === 'string') return subject || '—'
+  if (subject && typeof subject === 'object' && typeof (subject as { name?: unknown }).name === 'string') {
+    return (subject as { name: string }).name
+  }
+  return '—'
+}

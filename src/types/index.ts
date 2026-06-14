@@ -1,3 +1,5 @@
+import { TestType, Difficulty, CorrectOption, QuestionType } from '@/lib/constants'
+
 export interface User {
   id: string
   name?: string
@@ -26,14 +28,14 @@ export type TestStatus = 'live' | 'unpublished' | 'scheduled' | 'expired' | 'dra
 export interface Test {
   id: string
   name: string
-  type: string
+  type: TestType
   subject: string
   topics: string[]
   sub_topics: string[]
   correct_marks: number
   wrong_marks: number
   unattempt_marks: number
-  difficulty: string
+  difficulty: Difficulty
   total_time: number
   total_marks: number
   total_questions: number
@@ -44,14 +46,14 @@ export interface Test {
 
 export interface Question {
   id?: string
-  type: string
+  type: QuestionType
   subject?: string
   question: string
   option1: string
   option2: string
   option3: string
   option4: string
-  correct_option: string
+  correct_option: CorrectOption
   explanation?: string
   difficulty?: string
   topic?: string
@@ -73,14 +75,14 @@ export interface LoginPayload {
 
 export interface CreateTestPayload {
   name: string
-  type: string
+  type: TestType
   subject: string
   topics: string[]
   sub_topics?: string[]
   correct_marks: number
   wrong_marks: number
   unattempt_marks: number
-  difficulty: string
+  difficulty: Difficulty
   total_time: number
   total_marks: number
   total_questions: number

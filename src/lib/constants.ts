@@ -25,5 +25,4 @@ export const CORRECT_OPTION_LABELS: Record<CorrectOption, string> = {
   option4: "Option 4",
 };
 
-export const QUESTION_TYPES = ["mcq"] as const;
-export type QuestionType = (typeof QUESTION_TYPES)[number];
+export type QuestionType = "mcq";

@@ -3,7 +3,7 @@ import { getSubTopicsByTopicIds } from '@/services/subject.service'
 import { QUERY_KEYS } from '@/lib/query-keys'
 
 export const useSubTopics = (topicIds: string[]) => {
-  const sortedIds = [...topicIds].sort()
+  const sortedIds = topicIds.toSorted()
 
   const { data, isLoading } = useQuery({
     queryKey: QUERY_KEYS.subTopics(sortedIds),

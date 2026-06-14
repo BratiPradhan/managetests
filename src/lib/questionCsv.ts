@@ -3,7 +3,7 @@ import { questionSchema, QuestionFormValues } from "@/lib/validations/question.s
 import { resolveName } from "@/lib/resolveNames";
 import { DIFFICULTIES } from "@/lib/constants";
 
-export const QUESTION_CSV_HEADERS = [
+const QUESTION_CSV_HEADERS = [
   "question",
   "option1",
   "option2",

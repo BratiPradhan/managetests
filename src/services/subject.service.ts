@@ -11,11 +11,6 @@ export const getTopicsBySubject = async (subjectId: string): Promise<Topic[]> =>
   return data.data
 }
 
-export const getSubTopicsByTopic = async (topicId: string): Promise<SubTopic[]> => {
-  const { data } = await apiClient.get<ApiResponse<SubTopic[]>>(`/sub-topics/topic/${topicId}`)
-  return data.data
-}
-
 export const getSubTopicsByTopicIds = async (topicIds: string[]): Promise<SubTopic[]> => {
   const { data } = await apiClient.post<ApiResponse<SubTopic[]>>('/sub-topics/multi-topics', {
     topicIds,

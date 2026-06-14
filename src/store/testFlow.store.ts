@@ -8,6 +8,7 @@ interface TestFlowState {
   setTestId: (id: string) => void
   setTestData: (data: Partial<Test>) => void
   addQuestion: (question: Question) => void
+  addQuestions: (questions: Question[]) => void
   updateQuestion: (index: number, question: Question) => void
   removeQuestion: (index: number) => void
   setQuestions: (questions: Question[]) => void
@@ -23,6 +24,8 @@ export const useTestFlowStore = create<TestFlowState>()((set) => ({
   setTestData: (data) => set({ testData: data }),
   addQuestion: (question) =>
     set((state) => ({ questions: [...state.questions, question] })),
+  addQuestions: (newQuestions) =>
+    set((state) => ({ questions: [...state.questions, ...newQuestions] })),
   updateQuestion: (index, question) =>
     set((state) => {
       const updated = [...state.questions]

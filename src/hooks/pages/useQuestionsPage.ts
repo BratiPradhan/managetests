@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getTestById, updateTest } from "@/services/test.service";
@@ -21,6 +21,7 @@ export function useQuestionsPage(id: string) {
   const {
     questions,
     addQuestion,
+    addQuestions,
     updateQuestion,
     removeQuestion,
     setQuestions,
@@ -31,31 +32,40 @@ export function useQuestionsPage(id: string) {
   const [error, setError] = useState<string | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [formKey, setFormKey] = useState(0);
+  const [mode, setMode] = useState<"manual" | "csv">("manual");
 
   const { data: test = null, isLoading: testLoading } = useQuery({
     queryKey: QUERY_KEYS.test(id),
-    queryFn: async () => {
-      const data = await getTestById(id);
-      // The store may still hold another test's in-memory questions from
-      // earlier in the session — discard them when switching tests so we
-      // don't show stale data instead of fetching this test's questions.
-      const store = useTestFlowStore.getState();
-      const isDifferentTest = store.testId !== id;
-      if (isDifferentTest) {
-        setQuestions([]);
-      }
-      setTestId(id);
-      if (
-        data.questions?.length &&
-        (isDifferentTest || store.questions.length === 0)
-      ) {
-        const existing = await fetchBulkQuestions(data.questions);
-        setQuestions(existing);
-      }
-      return data;
-    },
+    queryFn: () => getTestById(id),
     enabled: !!id,
   });
+
+  const questionIds = test?.questions ?? [];
+  const { data: fetchedQuestions, isLoading: questionsLoading } = useQuery({
+    queryKey: QUERY_KEYS.questions(questionIds),
+    queryFn: () => fetchBulkQuestions(questionIds),
+    enabled: questionIds.length > 0,
+  });
+
+  // Entering this test (fresh load or switching from another test): drop any
+  // in-memory questions left over from another test's editing session.
+  useEffect(() => {
+    if (!test) return;
+    if (useTestFlowStore.getState().testId !== id) {
+      setTestId(id);
+      setQuestions([]);
+    }
+  }, [test, id, setTestId, setQuestions]);
+
+  // Once this test's saved questions arrive, load them into the flow store —
+  // but don't clobber questions already being edited in this session.
+  useEffect(() => {
+    if (!fetchedQuestions?.length) return;
+    const store = useTestFlowStore.getState();
+    if (store.testId === id && store.questions.length === 0) {
+      setQuestions(fetchedQuestions);
+    }
+  }, [fetchedQuestions, id, setQuestions]);
 
   const { subjects } = useSubjects();
   const resolvedSubject = useMemo(
@@ -127,6 +137,28 @@ export function useQuestionsPage(id: string) {
     resetForm();
   }, []);
 
+  const switchMode = useCallback(
+    (next: "manual" | "csv") => {
+      if (editingIndex !== null) handleCancelEdit();
+      setMode(next);
+    },
+    [editingIndex, handleCancelEdit],
+  );
+
+  const handleImportQuestions = useCallback(
+    (rows: QuestionFormValues[]) => {
+      const newQuestions: Question[] = rows.map((values) => ({
+        ...values,
+        type: "mcq",
+        test_id: id,
+        subject: test?.subject,
+      }));
+      addQuestions(newQuestions);
+      setMode("manual");
+    },
+    [addQuestions, id, test?.subject],
+  );
+
   const { mutateAsync: saveQuestions } = useMutation({
     mutationFn: async () => {
       const newQs = questions.filter((q) => !q.id);
@@ -193,7 +225,7 @@ export function useQuestionsPage(id: string) {
 
   return {
     test,
-    loading: testLoading,
+    loading: testLoading || questionsLoading,
     saving,
     error,
     questions,
@@ -202,11 +234,14 @@ export function useQuestionsPage(id: string) {
     formDefaultValues,
     topicOptions,
     subTopicOptions,
+    mode,
+    switchMode,
     handleAdd,
     handleUpdate,
     handleDelete,
     handleEdit,
     handleCancelEdit,
+    handleImportQuestions,
     handleSaveAndContinue,
     handleExit,
   };

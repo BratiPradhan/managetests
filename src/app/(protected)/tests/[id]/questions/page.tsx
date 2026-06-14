@@ -4,9 +4,20 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuestionsPage } from "@/hooks/pages/useQuestionsPage";
 import QuestionForm from "@/components/tests/QuestionForm";
+import QuestionCsvImport from "@/components/tests/QuestionCsvImport";
 import QuestionSidebar from "@/components/tests/QuestionSidebar";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, BookOpen, Clock, FileText, Gauge, Pencil } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  BarChart3,
+  BookOpen,
+  Clock,
+  FileText,
+  Gauge,
+  Pencil,
+  Plus,
+  Upload,
+} from "lucide-react";
 
 export default function QuestionsPage() {
   const { id } = useParams<{ id: string }>();
@@ -21,11 +32,14 @@ export default function QuestionsPage() {
     formDefaultValues,
     topicOptions,
     subTopicOptions,
+    mode,
+    switchMode,
     handleAdd,
     handleUpdate,
     handleDelete,
     handleEdit,
     handleCancelEdit,
+    handleImportQuestions,
     handleSaveAndContinue,
     handleExit,
   } = useQuestionsPage(id);
@@ -150,30 +164,66 @@ export default function QuestionsPage() {
         <div className="bg-white rounded-xl border border-gray-100 p-5 flex-1">
           <div className="flex items-center justify-between mb-5">
             <h2 className="font-semibold text-gray-800">
-              {editingIndex !== null
-                ? `Editing Question ${editingIndex + 1}`
-                : `Add Question ${questions.length + 1}`}
+              {mode === "csv"
+                ? "Bulk Import via CSV"
+                : editingIndex !== null
+                  ? `Editing Question ${editingIndex + 1}`
+                  : `Add Question ${questions.length + 1}`}
             </h2>
-            {editingIndex !== null && (
+            <div className="flex items-center gap-2">
+              {editingIndex !== null && mode === "manual" && (
+                <button
+                  onClick={handleCancelEdit}
+                  className="text-sm text-gray-400 hover:text-gray-600 flex items-center gap-1"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  Cancel Edit
+                </button>
+              )}
               <button
-                onClick={handleCancelEdit}
-                className="text-sm text-gray-400 hover:text-gray-600 flex items-center gap-1"
+                onClick={() => switchMode("manual")}
+                className={cn(
+                  "flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-full border transition-colors",
+                  mode === "manual"
+                    ? "border-brand text-brand bg-brand/5"
+                    : "border-gray-200 text-gray-400 hover:text-gray-600",
+                )}
               >
-                <Pencil className="w-3.5 h-3.5" />
-                Cancel Edit
+                <Plus className="w-3.5 h-3.5" />
+                MCQ
               </button>
-            )}
+              <button
+                onClick={() => switchMode("csv")}
+                className={cn(
+                  "flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-full border transition-colors",
+                  mode === "csv"
+                    ? "border-brand text-brand bg-brand/5"
+                    : "border-gray-200 text-gray-400 hover:text-gray-600",
+                )}
+              >
+                <Upload className="w-3.5 h-3.5" />
+                CSV
+              </button>
+            </div>
           </div>
 
-          <QuestionForm
-            key={formKey}
-            defaultValues={formDefaultValues}
-            topicOptions={topicOptions}
-            subTopicOptions={subTopicOptions}
-            isEditing={editingIndex !== null}
-            onSubmit={editingIndex !== null ? handleUpdate : handleAdd}
-            onCancel={editingIndex !== null ? handleCancelEdit : undefined}
-          />
+          {mode === "csv" ? (
+            <QuestionCsvImport
+              topicOptions={topicOptions}
+              subTopicOptions={subTopicOptions}
+              onImport={handleImportQuestions}
+            />
+          ) : (
+            <QuestionForm
+              key={formKey}
+              defaultValues={formDefaultValues}
+              topicOptions={topicOptions}
+              subTopicOptions={subTopicOptions}
+              isEditing={editingIndex !== null}
+              onSubmit={editingIndex !== null ? handleUpdate : handleAdd}
+              onCancel={editingIndex !== null ? handleCancelEdit : undefined}
+            />
+          )}
         </div>
 
         {/* Mobile question list */}

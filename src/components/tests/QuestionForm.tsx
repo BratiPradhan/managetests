@@ -18,14 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-const DIFFICULTY_LEVELS = ["easy", "medium", "hard"];
-const CORRECT_OPTIONS = [
-  { value: "option1", label: "Option 1" },
-  { value: "option2", label: "Option 2" },
-  { value: "option3", label: "Option 3" },
-  { value: "option4", label: "Option 4" },
-];
+import {
+  DIFFICULTIES,
+  DIFFICULTY_LABELS,
+  CORRECT_OPTIONS,
+  CORRECT_OPTION_LABELS,
+} from "@/lib/constants";
 
 interface NamedOption {
   id: string;
@@ -126,8 +124,8 @@ export default function QuestionForm({
               </SelectTrigger>
               <SelectContent>
                 {CORRECT_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>
-                    {o.label}
+                  <SelectItem key={o} value={o}>
+                    {CORRECT_OPTION_LABELS[o]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -215,9 +213,9 @@ export default function QuestionForm({
                   <SelectValue placeholder="Select difficulty" />
                 </SelectTrigger>
                 <SelectContent>
-                  {DIFFICULTY_LEVELS.map((d) => (
+                  {DIFFICULTIES.map((d) => (
                     <SelectItem key={d} value={d}>
-                      {d.charAt(0).toUpperCase() + d.slice(1)}
+                      {DIFFICULTY_LABELS[d]}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -76,7 +76,13 @@ export default function TestTable({ tests, onDeleted }: TestTableProps) {
                 </TableCell>
                 <TableCell>{formatDate(test.created_at)}</TableCell>
                 <TableCell className="text-right space-x-2">
-                  <Button size="sm" variant="outline" onClick={() => router.push(`/tests/${test.id}/edit`)}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => router.push(`/tests/${test.id}/edit`)}
+                    disabled={test.status === 'live'}
+                    title={test.status === 'live' ? 'Published tests cannot be edited' : undefined}
+                  >
                     Edit
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => router.push(`/tests/${test.id}/preview`)}>
@@ -109,7 +115,14 @@ export default function TestTable({ tests, onDeleted }: TestTableProps) {
             <p className="text-xs text-gray-400">{formatDate(test.created_at)}</p>
 
             <div className="flex gap-2 pt-1">
-              <Button size="sm" variant="outline" className="flex-1" onClick={() => router.push(`/tests/${test.id}/edit`)}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1"
+                onClick={() => router.push(`/tests/${test.id}/edit`)}
+                disabled={test.status === 'live'}
+                title={test.status === 'live' ? 'Published tests cannot be edited' : undefined}
+              >
                 Edit
               </Button>
               <Button size="sm" variant="outline" className="flex-1" onClick={() => router.push(`/tests/${test.id}/preview`)}>
